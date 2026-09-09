@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>myvalues</title>
+    <link rel="icon" type="image/xicon" href="images/favicon.ico" />
+    <link href="main.css" rel="stylesheet" />
+    <link href="fontawesome/css/fontawesome.min.css" rel="stylesheet" />
+    <link href="fontawesome/css/solid.min.css" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+    <div class="app">
+        <div class="app-header">
+            <div class="app-name">myvalues</div>
+            <div class="app-tagline">DISCOVER WHAT MATTERS TO YOU</div>
+        </div>
+
+        <div id="start-screen" class="screen active">
+            <p class="screen-description">
+                This tool helps you discover your values, what matters most to you in life, and compare them with
+                the values you currently organize your life around. Along the way, you'll uncover the disconnect
+                between the two, your level of authenticity, and any harmonies and dissonances between your
+                different values.
+            </p>
+            <div class="screen-actions">
+                <button id="upload-button" class="btn btn-secondary-pink">Upload previous results</button>
+                <button id="start-button" class="btn btn-primary">Start</button>
+            </div>
+            <div class="upload-action">
+                <input type="file" id="upload-input" accept="application/json" hidden />
+                <p id="upload-error" class="upload-error"></p>
+            </div>
+        </div>
+
+        <div id="wizard-screen" class="screen">
+            <div class="progress-track">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+
+            <div id="intro-block" class="intro-block">
+                <p id="intro-text" class="screen-description"></p>
+            </div>
+
+            <div id="question-block" class="question-block">
+                <div id="question-number" class="question-number"></div>
+                <div id="question-context" class="question-context"></div>
+                <div id="question-text" class="question-text"></div>
+
+                <div id="scale" class="scale"></div>
+                <div class="scale-labels">
+                    <span class="scale-label-start">Strongly disagree</span>
+                    <span class="scale-label-end">Strongly agree</span>
+                </div>
+            </div>
+
+            <div class="wizard-nav">
+                <button id="back-button" class="btn btn-text"><i class="fa-solid fa-angle-left"></i>Back</button>
+                <button id="continue-button" class="btn btn-primary">Continue</button>
+            </div>
+        </div>
+
+        <div id="results-screen" class="screen">
+            <nav class="results-nav">
+                <a href="#core-values-section" class="results-nav-link" data-section="core-values-section">Core Values</a>
+                <a href="#current-focus-section" class="results-nav-link" data-section="current-focus-section">Current Focus</a>
+                <a href="#authenticity-section" class="results-nav-link" data-section="authenticity-section">Authenticity Score</a>
+                <a href="#comparison-section" class="results-nav-link" data-section="comparison-section">Comparison</a>
+                <a href="#harmonies-section" class="results-nav-link" data-section="harmonies-section">Harmonies</a>
+                <a href="#dissonances-section" class="results-nav-link" data-section="dissonances-section">Dissonances</a>
+                <a href="#all-values-section" class="results-nav-link" data-section="all-values-section">All Values</a>
+            </nav>
+
+            <h1 class="results-title">Your Results</h1>
+
+            <section id="core-values-section" class="results-section">
+                <h2 class="results-section-title">Core Values</h2>
+                <p class="screen-description">
+                    These are what matter most to you in life.
+                </p>
+                <div id="top-values-list" class="results-list"></div>
+            </section>
+
+            <section id="current-focus-section" class="results-section">
+                <h2 class="results-section-title">Current Focus</h2>
+                <p class="screen-description">
+                    These are what you currently organize your life around.
+                </p>
+                <div id="top-actual-values-list" class="results-list"></div>
+            </section>
+
+            <section id="authenticity-section" class="results-section">
+                <h2 class="results-section-title">Authenticity Score</h2>
+                <p class="screen-description">
+                    This shows how closely you're currently living in line with your true values.
+                </p>
+                <div class="authenticity-track">
+                    <div id="authenticity-fill" class="authenticity-fill"></div>
+                    <div id="authenticity-marker" class="authenticity-marker">
+                        <span id="authenticity-percent" class="authenticity-percent"></span>
+                    </div>
+                </div>
+                <p id="authenticity-definition" class="authenticity-definition"></p>
+            </section>
+
+            <section id="comparison-section" class="results-section">
+                <h2 class="results-section-title">Ideal vs. Actual Comparison</h2>
+                <p class="screen-description">
+                    These are the values where the gap between your ideal life and your actual life is the widest.
+                </p>
+                <div class="results-legend">
+                    <span class="legend-item"><span class="legend-dot legend-dot-ideal"></span>Ideal life</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot-actual"></span>Life as it is now</span>
+                </div>
+                <div id="disconnects-list" class="results-list"></div>
+            </section>
+
+            <section id="harmonies-section" class="results-section">
+                <h2 class="results-section-title">Harmonies</h2>
+                <p class="screen-description">
+                    Your core values, paired with the other values they harmonize with.
+                </p>
+                <div id="harmony-pairs-list" class="harmony-pairs-list"></div>
+            </section>
+
+            <section id="dissonances-section" class="results-section">
+                <h2 class="results-section-title">Dissonances</h2>
+                <p class="screen-description">
+                    Your core values, paired with the other values they clash with.
+                </p>
+                <div id="dissonance-pairs-list" class="harmony-pairs-list"></div>
+            </section>
+
+            <section id="all-values-section" class="results-section">
+                <h2 class="results-section-title">All Values</h2>
+                <p class="screen-description">
+                    The complete list of all 16 values.
+                </p>
+                <div class="results-legend">
+                    <span class="legend-item"><span class="legend-dot legend-dot-ideal"></span>Ideal life</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot-actual"></span>Life as it is now</span>
+                </div>
+                <div id="results-list" class="results-list"></div>
+            </section>
+
+            <div class="screen-actions">
+                <button id="restart-button" class="btn btn-secondary-pink">Start Over</button>
+                <button id="download-button" class="btn btn-primary">Download results</button>
+            </div>
+        </div>
+    </div>
+    <div id="to-top"><i class="fa-solid fa-angle-up"></i> Back to top</div>
+    <script src="main.js" type="application/javascript"></script>
+</body>
+
+</html>
