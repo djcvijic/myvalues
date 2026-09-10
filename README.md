@@ -4,11 +4,20 @@ A single-page, no-build-step web app that walks someone through a values
 self-assessment and shows them where their *ideal* life and their *actual*
 life line up or diverge.
 
-There is no framework, no bundler, no package manager. It's three files:
+There is no framework, no bundler, no package manager. Plain `var`/`function`,
+ES5-style, no modules — just `<link>`/`<script>` tags loaded in order:
 
 - `index.html` — the three screens (start, wizard, results) and all their DOM structure.
-- `main.css` — all styling.
-- `main.js` — all state, all logic, all rendering. Plain `var`/`function`, ES5-style, no modules.
+- `theme.css` — generic page theme (fonts, colors, buttons, screen chrome, floating widgets). Nothing values/statements/results-specific.
+- `wizard.css` — styling for the start screen and wizard (upload, progress bar, statement display, rating scale).
+- `results.css` — styling for the results screen (floating nav, section dividers, authenticity bar, value-pair rows, result items).
+- `theme.js` — generic page behavior with no dependency on app state. Currently just the "back to top" button.
+- `values-data.js` — pure content: the 16 values, their harmony/dissonance pairs, and the rating-scale constants. No logic.
+- `wizard.js` — statement sequencing, state persistence (URL hash + localStorage), and wizard screen mechanics, plus download/upload.
+- `results.js` — turning `answers` into the results screen: score computation, selection algorithms, and all rendering, plus the results-page scroll-spy nav.
+- `main.js` — boot sequence, event wiring, and the debug shortcut. Loads last, after the three files above.
+
+Load order matters: `values-data.js` → `wizard.js` → `results.js` → `main.js` (each depends on globals the previous ones define). `theme.js`/`theme.css` have no dependency on the others and can load anywhere.
 
 ## Running it
 
@@ -27,12 +36,12 @@ under `file://`).
 
 The user answers 32 statements on a −3..+3 scale: the same 16 value
 statements asked twice, once framed as "in my ideal life" and once as "in my
-life as it is now". From those 32 numbers, `main.js` derives everything on
+life as it is now". From those 32 numbers, `results.js` derives everything on
 the results screen — there is no other input.
 
 ## Data model
 
-### `VALUES` (`main.js:16`)
+### `VALUES`
 
 The single source of truth for content. An array of 16 objects:
 
@@ -46,36 +55,36 @@ The single source of truth for content. An array of 16 objects:
   `actual > ideal` (see `buildComparisonResultItem`).
 
 Order in this array is the *canonical* value order (index 0..15). It is not
-the order questions are presented in — see `IDEAL_ORDER`/`ACTUAL_ORDER` below.
+the order statements are presented in — see `IDEAL_ORDER`/`ACTUAL_ORDER` below.
 
-### `answers` (`main.js:240`)
+### `answers`
 
-A flat array of length `TOTAL_QUESTIONS` (32). Index `i` (0..15) is the
+A flat array of length `TOTAL_STATEMENTS` (32). Index `i` (0..15) is the
 *ideal* score for `VALUES[i]`; index `i + 16` is the *actual* score for the
 same value. Each entry is `null` (unanswered) or an integer in
 `[SCALE_MIN, SCALE_MAX]` (−3..3).
 
-### `steps` (`main.js:222`)
+### `steps`
 
 The wizard's presentation sequence, built once at load time by
-`buildSteps()`. It interleaves two "intro" steps with 32 "question" steps,
-each question step carrying:
+`buildSteps()`. It interleaves two "intro" steps with 32 "statement" steps,
+each statement step carrying:
 
-- `questionIndex` — the index into `answers`/`VALUES` (0..31), used to read/write the actual data.
+- `statementIndex` — the index into `answers`/`VALUES` (0..31), used to read/write the actual data.
 - `displayNumber` — the 1..32 sequential position *in presentation order*, used only for the "Statement X of 32" label.
 
 These two numbers are **not the same**, and conflating them was a real bug
 (see Edge cases below).
 
-### `IDEAL_ORDER` / `ACTUAL_ORDER` (`main.js:219`)
+### `IDEAL_ORDER` / `ACTUAL_ORDER`
 
 Fixed, hardcoded shuffles of `[0..15]` — one for the ideal half, one for the
 actual half. They exist purely so every visitor sees the same
-non-sequential, decorrelated question order (so e.g. "Family" isn't always
+non-sequential, decorrelated statement order (so e.g. "Family" isn't always
 immediately followed by "Service"), while still being deterministic/stable
 across sessions and code reloads. They are not randomized per-visitor.
 
-### `HARMONY_PAIRS` / `DISSONANCE_PAIRS` (`main.js:133`, `main.js:170`)
+### `HARMONY_PAIRS` / `DISSONANCE_PAIRS`
 
 Flat arrays of `[nameA, nameB, explanation]` triples. This is the *only*
 place value relationships are stored — values themselves carry no
@@ -88,18 +97,18 @@ exactly once.
 Everything below is computed fresh from `answers` every time `renderResults()`
 runs — nothing is cached across renders.
 
-### `computeResults()` (`main.js:543`)
+### `computeResults()`
 
 Joins `answers` back onto `VALUES` to produce one object per value:
 `{ name, definition, deficitExplanation, excessExplanation, ideal, actual }`.
 Unanswered (`null`) scores are coerced to `0` — a safe default for
 incomplete data, not a score a user can actually pick (0 sits at the
-midpoint of −3..3, but nothing forces someone to answer every question, so
+midpoint of −3..3, but nothing forces someone to answer every statement, so
 this only matters for partially-completed runs). Sorted by `ideal` desc,
 then `actual` desc — this sort order is relied on by `selectTopIdealValues`
 (it reads `results[0]` and `results[2]` assuming that order).
 
-### `scoreToPercent(score)` (`main.js:564`)
+### `scoreToPercent(score)`
 
 `((score - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100` — maps −3..3 onto
 0..100%. This is the only place raw scores become the percentages shown in
@@ -107,10 +116,11 @@ the UI.
 
 ### Core Values / Current Focus selection
 
-`selectTopIdealValues` (`main.js:702`) and `selectTopActualValues`
-(`main.js:743`) pick which values surface in the "Core Values" and "Current
-Focus" sections. Both run the same 3-step algorithm, one keyed on `ideal`,
-the other on `actual`:
+`selectTopIdealValues` and `selectTopActualValues` pick which values surface
+in the "Core Values" and "Current Focus" sections. Both are thin wrappers
+around the shared `selectTopValuesByScore(results, scoreField)`, which runs
+the same 3-step algorithm keyed on whichever field (`"ideal"` or `"actual"`)
+is passed in:
 
 1. Take the #1-ranked value, plus every value tied with it.
 2. If that's fewer than 5 values, also add every value at ≥80% (`scoreToPercent(score) >= 80`).
@@ -121,32 +131,32 @@ that (a) never arbitrarily excludes a tied value, (b) surfaces a natural
 cluster of "clearly important" values when one exists, and (c) still
 guarantees at least 3 results even when scores are flat/unanswered.
 
-`selectTopActualValues` re-sorts `results` by `actual` locally (`results` is
-only ever pre-sorted by `ideal`) — don't assume `results` is actual-sorted
-anywhere else.
+`selectTopValuesByScore` always re-sorts `results` by the given field locally
+first (`results` coming in is only ever pre-sorted by `ideal`) — don't assume
+`results` is sorted by anything other than `ideal` outside this function.
 
 ### Authenticity Score
 
-- `computeWeight(result)` (`main.js:790`) = `max(ideal, actual) - SCALE_MIN`. A value is weighted by whichever of its two scores is *higher* — a value you're strongly living out counts as much as one you strongly aspire to, so the score isn't biased toward aspiration alone.
-- `computeWeightedDiff(result)` (`main.js:797`) = `computeWeight(result) * abs(ideal - actual)`. Also known as the **"value disconnect score"** — this exact quantity feeds both the authenticity score and the comparison ranking below. Both names appear in the codebase; they mean the same number.
-- `computeAuthenticityScore(results)` (`main.js:802`) is `(1 - weightedMeanAbsoluteDeviation / maxPossibleDiff) * 100`, rounded. 100 = every value's ideal and actual scores match exactly; 0 = maximum possible weighted disconnect across the board.
-- The score always renders as the same purple (`#675FA9`) regardless of value — there is no tier-based color switching, only `AUTHENTICITY_TIERS` (`main.js:878`) picking which *sentence* of feedback to show, by score threshold (80 / 50 / else).
+- `computeWeight(result)` = `max(ideal, actual) - SCALE_MIN`. A value is weighted by whichever of its two scores is *higher* — a value you're strongly living out counts as much as one you strongly aspire to, so the score isn't biased toward aspiration alone.
+- `computeDisconnectScore(result)` = `computeWeight(result) * abs(ideal - actual)`. Feeds both the authenticity score and the comparison ranking below.
+- `computeAuthenticityScore(results)` is `(1 - weightedMeanAbsoluteDeviation / maxPossibleDiff) * 100`, rounded. 100 = every value's ideal and actual scores match exactly; 0 = maximum possible weighted disconnect across the board.
+- The score always renders as the same purple (`#675FA9`) regardless of value — there is no tier-based color switching, only `AUTHENTICITY_TIERS` picking which *sentence* of feedback to show, by score threshold (80 / 50 / else).
 
 ### Ideal vs. Actual Comparison
 
-`selectGreatestDisconnects` (`main.js:824`) sorts all 16 values by
-`computeWeightedDiff` descending (ties broken by higher `ideal`), then keeps
-only those at or above `DISCONNECT_THRESHOLD_PERCENT` (30%) of the
-*maximum possible* weighted diff (`MAX_WEIGHTED_DIFF = (SCALE_MAX-SCALE_MIN)^2`).
-This is **not** "top N" — it's an absolute threshold, so it can return
-anywhere from 0 to 16 values. If it returns 0, the whole "Ideal vs. Actual
-Comparison" section is hidden (`comparisonSectionEl.style.display = "none"`
-in `renderResults`).
+`selectGreatestDisconnects` sorts all 16 values by `computeDisconnectScore`
+descending (ties broken by higher `ideal`), then keeps only those at or
+above `DISCONNECT_THRESHOLD_PERCENT` (30%) of the *maximum possible*
+disconnect score (`MAX_DISCONNECT_SCORE = (SCALE_MAX-SCALE_MIN)^2`). This is
+**not** "top N" — it's an absolute threshold, so it can return anywhere from
+0 to 16 values. If it returns 0, the whole "Ideal vs. Actual Comparison"
+section is hidden (`comparisonSectionEl.style.display = "none"` in
+`renderResults`).
 
 ### Harmonies / Dissonances
 
-`computeCoreValuePairs(results, pairsList)` (`main.js:833`) is the shared
-engine behind both sections:
+`computeCoreValuePairs(results, pairsList)` is the shared engine behind both
+sections:
 
 1. Build the eligible set = exactly the output of `selectTopIdealValues(results)` (i.e. the same "Core Values" set shown earlier on the page — nothing else qualifies, there is no separate score threshold here anymore).
 2. Walk `pairsList` (`HARMONY_PAIRS` or `DISSONANCE_PAIRS`); keep a pair only if **both** names are in the eligible set.
@@ -169,11 +179,11 @@ history / prior design notes if this behavior is ever questioned.
 
 ## State persistence (why the URL looks like that)
 
-`persistState()` (`main.js:380`) writes state to **two** places on every
-question answered and on entering results:
+`persistState()` writes state to **two** places on every statement answered
+and on entering results:
 
 1. `localStorage` (`STORAGE_KEY = "myvalues-state-v1"`), as plain JSON.
-2. The URL hash, bit-packed and base64url-encoded (`encodeState`/`decodeState`, `main.js:292`-`378`), so a results/progress link is shareable and short.
+2. The URL hash, bit-packed and base64url-encoded (`encodeState`/`decodeState`), so a results/progress link is shareable and short.
 
 The bit layout is fixed: 1 bit for screen (wizard vs results) + 6 bits for
 `currentStep` + 3 bits per answer × 32 answers = 103 bits, padded to a byte
@@ -181,23 +191,21 @@ boundary before base64url encoding. **3 bits per answer is load-bearing**:
 it needs to represent 8 states (`null` + 7 possible scores from −3..3
 inclusive) — if the scale range ever changes, `ANSWER_BITS` must be revisited.
 
-On load, `restoreState()` (`main.js:395`) prefers the URL hash over
-`localStorage` if both are present and the hash parses successfully;
-`localStorage` is the fallback for a bare URL with no hash (e.g. after
-closing and reopening the tab).
+On load, `restoreState()` prefers the URL hash over `localStorage` if both
+are present and the hash parses successfully; `localStorage` is the fallback
+for a bare URL with no hash (e.g. after closing and reopening the tab).
 
 ## The results-page nav box
 
-`initResultsNav()` (`main.js:1041`) builds a small always-visible nav
-listing every results section. Two things it does that aren't obvious from
-the markup:
+`initResultsNav()` builds a small always-visible nav listing every results
+section. Two things it does that aren't obvious from the markup:
 
 - **Hiding links for hidden sections**: `updateVisibility()` checks each linked section's *inline* `style.display` (set by `renderResults`/`renderCoreValuePairs` when a section has nothing to show) and hides the corresponding nav link to match. It does not use `getComputedStyle` — if a section is ever hidden via a CSS class instead of inline style, this check needs to change too.
 - **Scroll-spy timing**: `resultsNav.refresh()` must be called *after* the results screen is actually visible (`showScreen(resultsScreen)`), not before — `updateActiveLink()` reads `getBoundingClientRect()`, which returns all-zero rects for anything still `display: none`. Both call sites (`finishWizard`, `restoreState`) call `showScreen` first, then `resultsNav.refresh()`. If you add a third call site, keep that order.
 
 ## Other things worth knowing
 
-- **Debug shortcut**: `Ctrl+Alt+R` (or `Cmd+Option+R` on Mac) fills all 32 answers randomly and jumps straight to results, with a toast confirmation. It's a capture-phase `window` keydown listener (`main.js:1132`) checking both `e.code` and `e.key` for cross-layout robustness. Intended for local testing only — there's no way to disable it in a "production" sense, so don't be surprised if it fires during a demo.
+- **Debug shortcut**: `Ctrl+Alt+R` (or `Cmd+Option+R` on Mac) fills all 32 answers randomly and jumps straight to results, with a toast confirmation. It's a capture-phase `window` keydown listener checking both `e.code` and `e.key` for cross-layout robustness. Intended for local testing only — there's no way to disable it in a "production" sense, so don't be surprised if it fires during a demo.
 - **Upload/Download**: "Download results" exports `{ version: 1, exportedAt, answers, results }` as JSON. "Upload previous results" only reads back `answers` (via `isValidAnswersArray`) and recomputes everything else — the exported `results` blob is for the user's own reference, not re-imported.
 - **Fonts**: `Work Sans` and `Ubuntu Mono` are self-hosted (`fonts/`), both under licenses that permit redistribution (SIL OFL / Ubuntu Font Licence — see `fonts/UFL.txt`). Font Awesome (`fontawesome/`) is Free, CC BY 4.0 + SIL OFL. Don't add a font here without checking its license permits bundling the actual font file in the repo.
-- **No build step, no linter config** — but there is a small test suite: `tests.html` + `tests.js`. It's a dependency-free harness that loads the real `main.js` against a DOM that mirrors `index.html`, then drives the actual global functions (`computeResults`, `selectTopIdealValues`, `computeHarmonyPairs`, `encodeState`/`decodeState`, etc.) with hand-picked scenarios and asserts on the results — nothing is mocked. Run it via a local server (`python3 -m http.server 8934`, then open `http://localhost:8934/tests.html`); results render on the page and print to the console. If you change `index.html`'s structure (add/remove/rename an id `main.js` looks up), mirror that change in `tests.html` too, or it'll throw on load instead of running anything.
+- **No build step, no linter config** — but there is a small test suite: `tests.html` + `tests.js`. It's a dependency-free harness that loads the real app scripts (`values-data.js`, `wizard.js`, `results.js`, `main.js`) against a DOM that mirrors `index.html`, then drives the actual global functions (`computeResults`, `selectTopIdealValues`, `computeHarmonyPairs`, `encodeState`/`decodeState`, etc.) with hand-picked scenarios and asserts on the results — nothing is mocked. Run it via a local server (`python3 -m http.server 8934`, then open `http://localhost:8934/tests.html`); results render on the page and print to the console. If you change `index.html`'s structure (add/remove/rename an id the app scripts look up), mirror that change in `tests.html` too, or it'll throw on load instead of running anything.

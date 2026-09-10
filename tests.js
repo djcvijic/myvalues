@@ -1,10 +1,7 @@
-// Minimal, dependency-free test harness for main.js.
-//
-// This project has no build step and no test framework on purpose, so this
-// runs directly against the real globals defined by main.js (answers,
-// VALUES, computeResults, selectTopIdealValues, restoreState, etc. —
-// nothing is mocked). Open tests.html through a local server to run it;
-// results render on the page and also print to the console.
+// Dependency-free test harness for main.js. Runs directly against the real
+// globals main.js defines (answers, VALUES, computeResults, restoreState,
+// etc.) — nothing is mocked. Open tests.html through a local server to run
+// it; results render on the page and print to the console.
 
 var TEST_CASES = [];
 
@@ -62,7 +59,7 @@ VALUES.forEach(function (v, i) {
 // to defaultScore (SCALE_MIN unless given), for BOTH ideal and actual.
 function setScores(scoresByName, defaultScore) {
     var fallback = defaultScore === undefined ? SCALE_MIN : defaultScore;
-    answers = new Array(TOTAL_QUESTIONS).fill(fallback);
+    answers = new Array(TOTAL_STATEMENTS).fill(fallback);
     Object.keys(scoresByName).forEach(function (name) {
         var idx = VALUE_INDEX_BY_NAME[name];
         var scores = scoresByName[name];
@@ -89,7 +86,7 @@ function clearPendingAdvance() {
 test("answering a statement updates the URL hash", function () {
     goToStart();
     startWizard();
-    advanceStep(); // past the ideal intro, onto the first question (currentStep = 1)
+    advanceStep();
 
     var hashBefore = location.hash;
     selectAnswer(2);
@@ -100,15 +97,15 @@ test("answering a statement updates the URL hash", function () {
     var decoded = decodeState(hashAfter.slice(1));
     assertEqual(decoded.screen, "wizard", "decoded screen");
     assertEqual(decoded.currentStep, 1, "decoded currentStep");
-    assertEqual(decoded.answers[steps[1].questionIndex], 2, "decoded answer for the question just answered");
+    assertEqual(decoded.answers[steps[1].statementIndex], 2, "decoded answer for the statement just answered");
 
     goToStart();
 });
 
 test("loading a URL with a wizard-progress hash restores the wizard at the right step and answers", function () {
-    var partialAnswers = new Array(TOTAL_QUESTIONS).fill(null);
-    partialAnswers[steps[1].questionIndex] = 2;
-    partialAnswers[steps[2].questionIndex] = -1;
+    var partialAnswers = new Array(TOTAL_STATEMENTS).fill(null);
+    partialAnswers[steps[1].statementIndex] = 2;
+    partialAnswers[steps[2].statementIndex] = -1;
     var encoded = encodeState({ screen: "wizard", currentStep: 3, answers: partialAnswers });
 
     goToStart();
@@ -118,14 +115,14 @@ test("loading a URL with a wizard-progress hash restores the wizard at the right
     assert(restored, "restoreState should report success");
     assert(wizardScreen.classList.contains("active"), "wizard screen should be active");
     assertEqual(currentStep, 3, "currentStep restored from the hash");
-    assertEqual(answers[steps[1].questionIndex], 2, "restored answer 1");
-    assertEqual(answers[steps[2].questionIndex], -1, "restored answer 2");
+    assertEqual(answers[steps[1].statementIndex], 2, "restored answer 1");
+    assertEqual(answers[steps[2].statementIndex], -1, "restored answer 2");
 
     goToStart();
 });
 
 test("loading a URL with a results hash restores the results screen with computed results", function () {
-    var fullAnswers = new Array(TOTAL_QUESTIONS).fill(1);
+    var fullAnswers = new Array(TOTAL_STATEMENTS).fill(1);
     var encoded = encodeState({ screen: "results", currentStep: steps.length - 1, answers: fullAnswers });
 
     goToStart();
@@ -142,9 +139,9 @@ test("loading a URL with a results hash restores the results screen with compute
 test("a valid URL hash takes priority over localStorage when both are present", function () {
     goToStart();
     setScores({ Experiences: { ideal: 3, actual: 3 } }, 3);
-    finishWizard(); // writes a "results" state to both localStorage and the hash
+    finishWizard();
 
-    var otherAnswers = new Array(TOTAL_QUESTIONS).fill(null);
+    var otherAnswers = new Array(TOTAL_STATEMENTS).fill(null);
     var encoded = encodeState({ screen: "wizard", currentStep: 5, answers: otherAnswers });
     location.hash = "#" + encoded;
 
@@ -160,13 +157,27 @@ test("a valid URL hash takes priority over localStorage when both are present", 
 test("an invalid URL hash falls back to localStorage instead of failing", function () {
     goToStart();
     setScores({ Experiences: { ideal: 2, actual: 2 } }, 2);
-    finishWizard(); // valid localStorage + hash
+    finishWizard();
 
     location.hash = "#not-a-valid-encoded-state!!!";
     var restored = restoreState();
 
     assert(restored, "restoreState should still report success via the localStorage fallback");
     assert(resultsScreen.classList.contains("active"), "should restore the results screen from localStorage");
+
+    goToStart();
+});
+
+test("restoreState: rejects a wizard state whose currentStep is out of range instead of crashing or applying it", function () {
+    var validAnswers = new Array(TOTAL_STATEMENTS).fill(null);
+    var encoded = encodeState({ screen: "wizard", currentStep: steps.length + 5, answers: validAnswers });
+
+    goToStart();
+    location.hash = "#" + encoded;
+    var restored = restoreState();
+
+    assertEqual(restored, false, "restoreState should report failure for an out-of-range currentStep");
+    assert(startScreen.classList.contains("active"), "should remain on the start screen, not switch into the wizard");
 
     goToStart();
 });
@@ -181,19 +192,86 @@ test("smoke test: progressing through all 32 statements sequentially reaches the
     assertEqual(steps[currentStep].type, "intro", "wizard should start on the ideal intro");
     advanceStep();
 
-    for (var count = 0; count < TOTAL_QUESTIONS; count++) {
+    for (var count = 0; count < TOTAL_STATEMENTS; count++) {
         var step = steps[currentStep];
-        assertEqual(step.type, "question", "step " + currentStep + " (statement " + (count + 1) + ") should be a question");
-        answers[step.questionIndex] = (count % 7) - 3;
+        assertEqual(step.type, "statement", "step " + currentStep + " (statement " + (count + 1) + ") should be a statement");
+        answers[step.statementIndex] = (count % 7) - 3;
         advanceStep();
         if (steps[currentStep] && steps[currentStep].type === "intro") {
-            advanceStep(); // skip the actual-life intro between the two halves
+            advanceStep();
         }
     }
 
     assert(resultsScreen.classList.contains("active"), "results screen should be active after the last statement");
     assertEqual(answers.indexOf(null), -1, "every one of the 32 answers should have been recorded");
 
+    goToStart();
+});
+
+// ===========================================================================
+// Wizard navigation
+// ===========================================================================
+
+test("goBack: decrements currentStep and re-renders the previous step, but is a no-op at step 0", function () {
+    goToStart();
+    startWizard();
+    assert(!backButton.classList.contains("visible"), "back button should be hidden at step 0");
+
+    advanceStep();
+    advanceStep();
+    assertEqual(currentStep, 2, "sanity check before going back");
+    assert(backButton.classList.contains("visible"), "back button should be visible once past step 0");
+
+    goBack();
+    assertEqual(currentStep, 1, "goBack decrements currentStep");
+
+    goBack();
+    assertEqual(currentStep, 0, "goBack decrements currentStep again");
+    assert(!backButton.classList.contains("visible"), "back button should be hidden again at step 0");
+
+    goBack();
+    assertEqual(currentStep, 0, "goBack does nothing once already at step 0");
+
+    goToStart();
+});
+
+test("wizard: shows the ideal framing for the first 16 statements and the actual framing for the last 16", function () {
+    goToStart();
+    startWizard();
+    assertEqual(introTextEl.textContent, IDEAL_INTRO_TEXT, "first intro text");
+
+    currentStep = 1;
+    renderStep();
+    assertEqual(statementContextEl.textContent, IDEAL_CONTEXT, "context on the first ideal statement");
+
+    currentStep = 16;
+    renderStep();
+    assertEqual(statementContextEl.textContent, IDEAL_CONTEXT, "context on the last ideal statement");
+
+    currentStep = 17;
+    renderStep();
+    assertEqual(introTextEl.textContent, ACTUAL_INTRO_TEXT, "second intro text");
+
+    currentStep = 18;
+    renderStep();
+    assertEqual(statementContextEl.textContent, ACTUAL_CONTEXT, "context on the first actual statement");
+
+    currentStep = 33;
+    renderStep();
+    assertEqual(statementContextEl.textContent, ACTUAL_CONTEXT, "context on the last actual statement");
+
+    goToStart();
+});
+
+test("\"Statement X of Y\" label matches presentation order (displayNumber), not the VALUES index (statementIndex)", function () {
+    steps.forEach(function (s, i) {
+        if (s.type !== "statement") {
+            return;
+        }
+        currentStep = i;
+        renderStep();
+        assertEqual(statementNumberEl.textContent, "Statement " + s.displayNumber + " of " + TOTAL_STATEMENTS, "step " + i);
+    });
     goToStart();
 });
 
@@ -264,8 +342,6 @@ test("Core Values: sorted by ideal score descending", function () {
         Experiences: { ideal: 3 }, Impact: { ideal: 1 }, Family: { ideal: 0 }, Service: { ideal: 0 }
     }, -3);
     var core = selectTopIdealValues(computeResults());
-    // Experiences(3) > Impact(1) > Family/Service tied at 0 — order among the tie is whatever
-    // computeResults' stable sort produced, but rank must strictly decrease across tiers.
     assertEqual(core[0].name, "Experiences", "rank 1");
     assertEqual(core[1].name, "Impact", "rank 2");
     assert(core[2].ideal === 0 && core[3].ideal === 0, "ranks 3-4 are the tied values");
@@ -324,8 +400,6 @@ test("Authenticity Score: 0 when every value is maximally split (ideal=3, actual
 
 test("Authenticity Score: a single maximally-split value among matched ones pulls the score down proportionally to its weight", function () {
     setScores({ Experiences: { ideal: 3, actual: -3 } }, 3);
-    // 16 values, weight 6 each; only Experiences has a non-zero weighted diff (6*6=36).
-    // weightedAvgDiff = 36 / (16*6) = 0.375; score = (1 - 0.375/6) * 100 = 93.75 -> rounds to 94.
     assertEqual(computeAuthenticityScore(computeResults()), 94, "score");
 });
 
@@ -336,48 +410,38 @@ test("Authenticity Score: a single maximally-split value among matched ones pull
 // ===========================================================================
 
 test("Comparison: individual disconnect percent is weight-scaled, not a plain |ideal - actual| gap", function () {
-    // Same raw gap of 6 (max), but different weights: Experiences weight = max(3,-3)-(-3) = 6;
-    // Impact weight = max(0,-6... ) — use max(-1,-3)-(-3)=... simpler: compare two values with an
-    // identical |ideal-actual| but different max(ideal,actual), and confirm their disconnect
-    // percents differ accordingly.
-    setScores({ Experiences: { ideal: 3, actual: -3 }, Impact: { ideal: -1, actual: -3 - 2 > SCALE_MIN ? -3 : SCALE_MIN } }, 0);
-    // Impact: ideal=-1, actual can't go below SCALE_MIN(-3); use a 2-point gap instead for clarity.
     setScores({ Experiences: { ideal: 3, actual: -3 }, Impact: { ideal: -1, actual: -3 } }, 0);
     var results = computeResults();
     var byName = {};
     results.forEach(function (r) { byName[r.name] = r; });
-    // Experiences: weight = max(3,-3)-(-3) = 6, diff = 6, weightedDiff = 36, percent = 100.
-    // Impact: weight = max(-1,-3)-(-3) = 2, diff = 2, weightedDiff = 4, percent = 4/36*100 = 11.11.
     assertEqual(computeDisconnectPercent(byName.Experiences), 100, "Experiences disconnect percent");
     assert(Math.abs(computeDisconnectPercent(byName.Impact) - (4 / 36 * 100)) < 0.001, "Impact disconnect percent");
 });
 
 test("Comparison: filters to disconnect percent >= 30%, excluding everything below the threshold", function () {
-    setScores({ Experiences: { ideal: 3, actual: -3 } }, 0); // 0 gap everywhere else -> 0% disconnect
+    setScores({ Experiences: { ideal: 3, actual: -3 } }, 0);
     var disconnects = selectGreatestDisconnects(computeResults());
     assertNamesEqual(disconnects, ["Experiences"], "disconnects at/above 30%");
 });
 
 test("Comparison: a disconnect just below the 30% threshold is excluded", function () {
-    // Find a (weight, diff) combination whose percent sits just under 30% of MAX_WEIGHTED_DIFF (36).
-    // weight=3 (ideal=actual=0, i.e. max(0,0)-(-3)=3), diff=3 (actual=-3) -> weightedDiff=9, 9/36*100=25% < 30%.
     setScores({ Experiences: { ideal: 0, actual: -3 } }, 0);
     var disconnects = selectGreatestDisconnects(computeResults());
     assertEqual(disconnects.length, 0, "25% disconnect should not qualify");
 });
 
-test("Comparison: sorted by weighted disconnect descending, ties broken by higher ideal score", function () {
+test("Comparison: sorted by disconnect score descending, ties broken by higher ideal score", function () {
     setScores({
-        Experiences: { ideal: 3, actual: -3 },  // weight 6, diff 6, weightedDiff 36 (highest)
-        Impact: { ideal: 2, actual: -3 },       // weight 5, diff 5, weightedDiff 25, ideal 2
-        Family: { ideal: 1, actual: -3 }        // weight 4, diff 4, weightedDiff 16, ideal 1
+        Experiences: { ideal: 3, actual: -3 },
+        Impact: { ideal: 2, actual: -3 },
+        Family: { ideal: 1, actual: -3 }
     }, 0);
     var disconnects = selectGreatestDisconnects(computeResults());
     assertNamesInOrder(disconnects, ["Experiences", "Impact", "Family"], "sort order");
 });
 
 test("Comparison: section hides when there are no qualifying disconnects, shows when there are", function () {
-    setScores({}, 1); // ideal === actual everywhere -> 0 disconnects
+    setScores({}, 1);
     finishWizard();
     assertEqual(comparisonSectionEl.style.display, "none", "hidden when empty");
 
@@ -400,8 +464,6 @@ test("Harmonies: individual percent shown for each side is always scoreToPercent
 });
 
 test("Harmonies: filters to pairs where BOTH sides are Core Values, not just individually high-scoring", function () {
-    // Same 6-way tie as the Core Values test above, so Core Values = exactly those 6.
-    // Work and Achievement sit at 83% but are NOT core (the tie group already has >=5 members).
     setScores({
         Experiences: { ideal: 3 }, Impact: { ideal: 3 }, Family: { ideal: 3 },
         Service: { ideal: 3 }, Fame: { ideal: 3 }, Agency: { ideal: 3 },
@@ -416,8 +478,6 @@ test("Harmonies: filters to pairs where BOTH sides are Core Values, not just ind
 });
 
 test("Harmonies: higher-ideal side is always placed on the left, pairs sorted by left then right ideal descending", function () {
-    // Experiences(3) is the sole #1, so step 2 pulls in every other 80%+ (ideal>=2) value:
-    // Fame, Impact, Wealth, Agency. Eligible set = {Experiences, Fame, Impact, Wealth, Agency}.
     setScores({
         Experiences: { ideal: 3 }, Fame: { ideal: 2 },
         Impact: { ideal: 2 }, Wealth: { ideal: 2 }, Agency: { ideal: 2 }
@@ -429,16 +489,12 @@ test("Harmonies: higher-ideal side is always placed on the left, pairs sorted by
     assert(byLeftName["Experiences-Fame"], "Experiences (higher ideal) should be on the left of its pair with Fame");
     assert(byLeftName["Impact-Wealth"], "Impact and Wealth (tied) should still form a pair");
 
-    // Experiences-Fame's left (ideal 3) outranks Impact-Wealth's left (ideal 2).
     var indexHigher = pairs.indexOf(byLeftName["Experiences-Fame"]);
     var indexLower = pairs.indexOf(byLeftName["Impact-Wealth"]);
     assert(indexHigher < indexLower, "the pair with the higher-scoring left side should sort first");
 });
 
 test("Harmonies: section hides when no eligible pairs exist, shows when at least one does", function () {
-    // Faith, Achievement, and Self-Expression share no HARMONY_PAIRS entry with each
-    // other, and this spread (3 / 1 / 0, rest at the floor) makes them exactly the
-    // eligible (Core Values) set via steps 1 and 3 -> 0 qualifying pairs.
     setScores({ Faith: { ideal: 3 }, Achievement: { ideal: 1 }, "Self-Expression": { ideal: 0 } }, SCALE_MIN);
     finishWizard();
     assertEqual(harmoniesSectionEl.style.display, "none", "hidden when empty");
@@ -458,7 +514,7 @@ test("Dissonances: filters to pairs where BOTH sides are Core Values, same rule 
     setScores({
         Family: { ideal: 3 }, Service: { ideal: 3 }, Fame: { ideal: 3 },
         Agency: { ideal: 3 }, Work: { ideal: 3 }, Achievement: { ideal: 3 },
-        Home: { ideal: 2 } // 83%, not core — would pair with Work under a naive threshold rule
+        Home: { ideal: 2 }
     }, SCALE_MIN);
     var pairs = computeDissonancePairs(computeResults());
 
@@ -475,8 +531,6 @@ test("Dissonances: higher-ideal side on the left, sorted the same way as Harmoni
 });
 
 test("Dissonances: section hides when no eligible pairs exist, shows when at least one does", function () {
-    // Home's only DISSONANCE_PAIRS entry is with Work (excluded here); Aesthetic and
-    // Self-Expression appear in no dissonance pair at all -> 0 qualifying pairs.
     setScores({ Home: { ideal: 3 }, Aesthetic: { ideal: 1 }, "Self-Expression": { ideal: 0 } }, SCALE_MIN);
     finishWizard();
     assertEqual(dissonancesSectionEl.style.display, "none", "hidden when empty");
@@ -511,6 +565,16 @@ test("All Values: sorted alphabetically by name", function () {
 // Special algorithms & edge cases
 // ===========================================================================
 
+test("isValidAnswersArray: validates shape, length, and value range", function () {
+    assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS).fill(null)), true, "all null is valid");
+    assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS).fill(0)), true, "all zero is valid");
+    assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS - 1).fill(null)), false, "wrong length is invalid");
+    assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS).fill(SCALE_MAX + 1)), false, "above-range value is invalid");
+    assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS).fill(SCALE_MIN - 1)), false, "below-range value is invalid");
+    assertEqual(isValidAnswersArray("not an array"), false, "non-array is invalid");
+    assertEqual(isValidAnswersArray(null), false, "null is invalid");
+});
+
 test("scoreToPercent maps the -3..3 scale onto 0..100 linearly", function () {
     assertEqual(scoreToPercent(SCALE_MIN), 0, "minimum score");
     assertEqual(scoreToPercent(SCALE_MAX), 100, "maximum score");
@@ -524,15 +588,15 @@ test("computeWeight uses whichever of ideal/actual is greater, symmetrically", f
     assertEqual(weightWhenActualHigher, 6, "weight when actual is the higher score (same magnitude)");
 });
 
-test("computeWeightedDiff (\"value disconnect score\") is weight times the absolute gap", function () {
+test("computeDisconnectScore is weight times the absolute gap", function () {
     var result = { ideal: 2, actual: -1 };
-    var expectedWeight = Math.max(2, -1) - SCALE_MIN; // 2 - (-3) = 5
-    var expectedDiff = Math.abs(2 - (-1)); // 3
-    assertEqual(computeWeightedDiff(result), expectedWeight * expectedDiff, "weighted diff");
+    var expectedWeight = Math.max(2, -1) - SCALE_MIN;
+    var expectedDiff = Math.abs(2 - (-1));
+    assertEqual(computeDisconnectScore(result), expectedWeight * expectedDiff, "disconnect score");
 });
 
 test("computeResults defaults unanswered (null) scores to 0, not to SCALE_MIN or a crash", function () {
-    answers = new Array(TOTAL_QUESTIONS).fill(null);
+    answers = new Array(TOTAL_STATEMENTS).fill(null);
     var results = computeResults();
     results.forEach(function (r) {
         assertEqual(r.ideal, 0, r.name + " ideal default");
@@ -543,7 +607,6 @@ test("computeResults defaults unanswered (null) scores to 0, not to SCALE_MIN or
 test("Harmony/Dissonance pair left/right assignment: an exact ideal tie keeps the pairs-list order (first name left)", function () {
     setScores({ Experiences: { ideal: 1 }, Fame: { ideal: 1 } }, SCALE_MIN);
     var pairs = computeHarmonyPairs(computeResults());
-    // HARMONY_PAIRS lists ["Experiences", "Fame", ...] in that order.
     assertEqual(pairs[0].left.name, "Experiences", "left side on an exact tie");
     assertEqual(pairs[0].right.name, "Fame", "right side on an exact tie");
 });
@@ -552,8 +615,8 @@ test("encodeState/decodeState round-trips a wizard-in-progress state through the
     var original = {
         screen: "wizard",
         currentStep: 17,
-        answers: new Array(TOTAL_QUESTIONS).fill(null).map(function (_, i) {
-            return i % 3 === 0 ? null : (i % 7) - 3; // stays within SCALE_MIN..SCALE_MAX
+        answers: new Array(TOTAL_STATEMENTS).fill(null).map(function (_, i) {
+            return i % 3 === 0 ? null : (i % 7) - 3;
         })
     };
     var decoded = decodeState(encodeState(original));
@@ -571,17 +634,39 @@ test("decodeState rejects garbage or truncated input instead of throwing", funct
 // Runner
 // ===========================================================================
 
+// The suite fires 100+ synchronous history.replaceState calls (persistState
+// runs on every rendered statement). No test depends on real History API
+// semantics — they only check the resulting location.hash — but that many
+// calls during the browser's initial page-load parse has occasionally
+// raced and left a stale hash behind. Writing to location.hash directly for
+// the run's duration avoids this; the real replaceState is restored after.
+function withStubbedHistory(fn) {
+    var realReplaceState = history.replaceState.bind(history);
+    history.replaceState = function (state, title, url) {
+        var hashIndex = url.indexOf("#");
+        location.hash = hashIndex === -1 ? "" : url.slice(hashIndex);
+    };
+    try {
+        return fn();
+    } finally {
+        history.replaceState = realReplaceState;
+    }
+}
+
 function runTests() {
     localStorage.clear();
-    goToStart();
 
-    var results = TEST_CASES.map(function (testCase) {
-        try {
-            testCase.fn();
-            return { name: testCase.name, pass: true };
-        } catch (e) {
-            return { name: testCase.name, pass: false, error: e.message };
-        }
+    var results = withStubbedHistory(function () {
+        goToStart();
+
+        return TEST_CASES.map(function (testCase) {
+            try {
+                testCase.fn();
+                return { name: testCase.name, pass: true };
+            } catch (e) {
+                return { name: testCase.name, pass: false, error: e.message };
+            }
+        });
     });
 
     goToStart();

@@ -5,7 +5,9 @@
     <meta charset="UTF-8" />
     <title>myvalues — test suite</title>
     <link rel="icon" type="image/xicon" href="images/favicon.ico" />
-    <link href="main.css" rel="stylesheet" />
+    <link href="theme.css" rel="stylesheet" />
+    <link href="wizard.css" rel="stylesheet" />
+    <link href="results.css" rel="stylesheet" />
     <link href="fontawesome/css/fontawesome.min.css" rel="stylesheet" />
     <link href="fontawesome/css/solid.min.css" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -108,10 +110,10 @@
                 <p id="intro-text" class="screen-description"></p>
             </div>
 
-            <div id="question-block" class="question-block">
-                <div id="question-number" class="question-number"></div>
-                <div id="question-context" class="question-context"></div>
-                <div id="question-text" class="question-text"></div>
+            <div id="statement-block" class="statement-block">
+                <div id="statement-number" class="statement-number"></div>
+                <div id="statement-context" class="statement-context"></div>
+                <div id="statement-text" class="statement-text"></div>
 
                 <div id="scale" class="scale"></div>
                 <div class="scale-labels">
@@ -186,7 +188,7 @@
                 <p class="screen-description">
                     Your core values, paired with the other values they harmonize with.
                 </p>
-                <div id="harmony-pairs-list" class="harmony-pairs-list"></div>
+                <div id="harmony-pairs-list" class="value-pairs-list"></div>
             </section>
 
             <section id="dissonances-section" class="results-section">
@@ -194,7 +196,7 @@
                 <p class="screen-description">
                     Your core values, paired with the other values they clash with.
                 </p>
-                <div id="dissonance-pairs-list" class="harmony-pairs-list"></div>
+                <div id="dissonance-pairs-list" class="value-pairs-list"></div>
             </section>
 
             <section id="all-values-section" class="results-section">
@@ -223,6 +225,10 @@
         <div id="test-cases"></div>
     </div>
 
+    <script src="theme.js" type="application/javascript"></script>
+    <script src="values-data.js" type="application/javascript"></script>
+    <script src="wizard.js" type="application/javascript"></script>
+    <script src="results.js" type="application/javascript"></script>
     <script src="main.js" type="application/javascript"></script>
     <script src="tests.js" type="application/javascript"></script>
 </body>
