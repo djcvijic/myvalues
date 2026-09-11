@@ -1,6 +1,4 @@
-// Generic page behavior with no dependency on values/statements/results
-// state. Nothing here should reference VALUES, answers, steps, or results —
-// that belongs in main.js.
+// Reusable page behavior. No app-specific dependency.
 
 function backToTop() {
     var toTop = document.getElementById("to-top");

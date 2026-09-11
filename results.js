@@ -1,8 +1,5 @@
-// Results computation and rendering: turning `answers` into the Core
-// Values / Current Focus / Authenticity Score / Comparison / Harmonies /
-// Dissonances / All Values sections, plus the results-page scroll-spy nav.
-// Depends on values-data.js and wizard.js (answers, showScreen, steps,
-// persistState, resultsScreen, and the *ListEl/*SectionEl DOM refs).
+// Depends on globals from values-data.js and wizard.js: answers, showScreen,
+// steps, persistState, resultsScreen, and the *ListEl/*SectionEl DOM refs.
 
 function computeResults() {
     var results = VALUES.map(function (v, i) {
@@ -65,8 +62,6 @@ function appendResultMarker(track, percent, variant) {
     track.appendChild(marker);
 }
 
-// Core Values and Current Focus are structurally identical, differing only
-// in which score field they read.
 function buildSingleScoreResultItem(scoreField) {
     return function (result) {
         var item = buildResultItemBase(result);
@@ -142,8 +137,8 @@ function renderResultsList(container, results, buildItem) {
     });
 }
 
-// Shared 3-step selection algorithm behind both "Core Values" (scoreField
-// "ideal") and "Current Focus" (scoreField "actual"):
+// Shared by "Core Values" (scoreField "ideal") and "Current Focus" (scoreField
+// "actual"):
 //   1. The #1 value, and anything tied with it.
 //   2. If that's fewer than 5, add every value at 80%+.
 //   3. If still fewer than 3, fall back to top 3 (with ties at #3 included).
@@ -197,13 +192,12 @@ function selectTopActualValues(results) {
     return selectTopValuesByScore(results, "actual");
 }
 
-// Weight uses whichever score is greater, so a value you're already living
-// out strongly counts as much as one you strongly aspire to.
+// Uses whichever score is greater, so a value you're living out strongly
+// counts as much as one you aspire to strongly.
 function computeWeight(result) {
     return Math.max(result.ideal, result.actual) - SCALE_MIN;
 }
 
-// Feeds both the authenticity score and the Ideal vs. Actual Comparison ranking.
 function computeDisconnectScore(result) {
     var diff = Math.abs(result.ideal - result.actual);
     return computeWeight(result) * diff;
@@ -246,7 +240,6 @@ function computeCoreValuePairs(results, pairsList) {
         resultsByName[r.name] = r;
     });
 
-    // Eligible = core values.
     var eligibleNames = {};
     selectTopIdealValues(results).forEach(function (r) {
         eligibleNames[r.name] = true;

@@ -1,6 +1,5 @@
-/* Generic page theme: fonts, colors, buttons, screen chrome, floating
-   widgets. Nothing here should reference values/statements/results content
-   — that belongs in main.css. */
+/* Reusable theme: fonts, colors, buttons, screen chrome, floating widgets,
+   modal dialogs. No app-specific content. */
 
 @font-face {
     font-family: "Work Sans";
@@ -208,6 +207,121 @@ button {
 
 #to-top:hover {
     background-color: #e6f6ff;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 20;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    background-color: white;
+    border-radius: 8px;
+    padding: 32px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.modal-close:hover {
+    color: #0099ff;
+}
+
+.modal-title {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    font-weight: bold;
+    color: #0099ff;
+}
+
+.modal-description {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.modal-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #0099ff;
+}
+
+.modal-error {
+    margin-top: 8px;
+    color: #CD2553;
+    font-size: 14px;
+}
+
+.modal-error:empty {
+    display: none;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.modal-copy-row {
+    display: flex;
+    gap: 8px;
+}
+
+.modal-copy-row .modal-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-copy-row .btn {
+    padding: 12px 20px;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.modal-copied {
+    margin-top: 8px;
+    color: #1a8a4a;
+    font-size: 14px;
+    font-weight: bold;
+    min-height: 1.2em;
 }
 
 @media screen and (max-width: 640px) {

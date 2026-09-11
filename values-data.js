@@ -1,6 +1,4 @@
-// Pure content: the 16 values, their harmony/dissonance relationships, and
-// the rating-scale constants used to score them. No logic, no DOM access.
-// Loads first — wizard.js and results.js both depend on these globals.
+// Loads first — wizard.js and results.js depend on these globals.
 
 var TOTAL_STATEMENTS = 32;
 var SCALE_MIN = -3;

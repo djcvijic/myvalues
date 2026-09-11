@@ -1,5 +1,4 @@
-// Boot sequence, event wiring, and the debug shortcut. Runs after
-// values-data.js, wizard.js, and results.js have all loaded.
+// Runs after values-data.js, wizard.js, and results.js.
 
 buildScale();
 
@@ -7,20 +6,39 @@ if (!restoreState()) {
     showScreen(startScreen);
 }
 
+// A hash dropped into an already-open tab only fires hashchange, no reload,
+// so restoreState() above won't see it.
+window.addEventListener("hashchange", function () {
+    consumeUrlHash();
+});
+
 startButton.addEventListener("click", startWizard);
 backButton.addEventListener("click", goBack);
 continueButton.addEventListener("click", advanceStep);
 restartButton.addEventListener("click", goToStart);
-downloadButton.addEventListener("click", downloadResults);
-uploadButton.addEventListener("click", function () {
-    uploadInput.click();
-});
-uploadInput.addEventListener("change", function (e) {
-    var file = e.target.files[0];
-    if (file) {
-        handleUploadedFile(file);
+shareButton.addEventListener("click", openShareModal);
+loadButton.addEventListener("click", openLoadModal);
+loadUrlSubmit.addEventListener("click", submitLoadUrl);
+loadUrlInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        submitLoadUrl();
     }
-    uploadInput.value = "";
+});
+shareUrlCopyButton.addEventListener("click", copyShareUrl);
+
+document.querySelectorAll(".modal-close").forEach(function (button) {
+    button.addEventListener("click", closeModals);
+});
+modalOverlay.addEventListener("click", function (e) {
+    if (e.target === modalOverlay) {
+        closeModals();
+    }
+});
+window.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modalOverlay.classList.contains("hidden")) {
+        closeModals();
+    }
 });
 
 var debugToastEl = document.createElement("div");

@@ -1,20 +1,5 @@
-/* Styles for the start screen and wizard: uploading previous results,
-   progress bar, statement display, and the rating scale. */
-
-.upload-action {
-    margin-top: 24px;
-    text-align: center;
-}
-
-.upload-error {
-    margin-top: 8px;
-    color: #CD2553;
-    font-size: 14px;
-}
-
-.upload-error:empty {
-    display: none;
-}
+/* Styles for the start screen and wizard: progress bar, statement display,
+   and the rating scale. */
 
 .progress-track {
     width: 100%;

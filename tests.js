@@ -1,8 +1,3 @@
-// Dependency-free test harness for main.js. Runs directly against the real
-// globals main.js defines (answers, VALUES, computeResults, restoreState,
-// etc.) — nothing is mocked. Open tests.html through a local server to run
-// it; results render on the page and print to the console.
-
 var TEST_CASES = [];
 
 function test(name, fn) {
@@ -55,8 +50,6 @@ VALUES.forEach(function (v, i) {
     VALUE_INDEX_BY_NAME[v.name] = i;
 });
 
-// Sets ideal/actual answers by value name. Anything not mentioned defaults
-// to defaultScore (SCALE_MIN unless given), for BOTH ideal and actual.
 function setScores(scoresByName, defaultScore) {
     var fallback = defaultScore === undefined ? SCALE_MIN : defaultScore;
     answers = new Array(TOTAL_STATEMENTS).fill(fallback);
@@ -79,11 +72,7 @@ function clearPendingAdvance() {
     }
 }
 
-// ===========================================================================
-// State <-> URL sync
-// ===========================================================================
-
-test("answering a statement updates the URL hash", function () {
+test("answering a statement persists to localStorage but leaves the URL hash untouched", function () {
     goToStart();
     startWizard();
     advanceStep();
@@ -91,18 +80,17 @@ test("answering a statement updates the URL hash", function () {
     var hashBefore = location.hash;
     selectAnswer(2);
     clearPendingAdvance();
-    var hashAfter = location.hash;
 
-    assert(hashAfter !== hashBefore, "hash should change after answering a statement");
-    var decoded = decodeState(hashAfter.slice(1));
-    assertEqual(decoded.screen, "wizard", "decoded screen");
-    assertEqual(decoded.currentStep, 1, "decoded currentStep");
-    assertEqual(decoded.answers[steps[1].statementIndex], 2, "decoded answer for the statement just answered");
+    assertEqual(location.hash, hashBefore, "hash should not change after answering a statement");
+    var stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    assertEqual(stored.screen, "wizard", "stored screen");
+    assertEqual(stored.currentStep, 1, "stored currentStep");
+    assertEqual(stored.answers[steps[1].statementIndex], 2, "stored answer for the statement just answered");
 
     goToStart();
 });
 
-test("loading a URL with a wizard-progress hash restores the wizard at the right step and answers", function () {
+test("loading a URL with a wizard-progress hash restores the wizard at the right step and answers, then clears the hash", function () {
     var partialAnswers = new Array(TOTAL_STATEMENTS).fill(null);
     partialAnswers[steps[1].statementIndex] = 2;
     partialAnswers[steps[2].statementIndex] = -1;
@@ -117,11 +105,12 @@ test("loading a URL with a wizard-progress hash restores the wizard at the right
     assertEqual(currentStep, 3, "currentStep restored from the hash");
     assertEqual(answers[steps[1].statementIndex], 2, "restored answer 1");
     assertEqual(answers[steps[2].statementIndex], -1, "restored answer 2");
+    assert(location.hash === "" || location.hash === "#", "hash should be cleared after being loaded");
 
     goToStart();
 });
 
-test("loading a URL with a results hash restores the results screen with computed results", function () {
+test("loading a URL with a results hash restores the results screen with computed results, then clears the hash", function () {
     var fullAnswers = new Array(TOTAL_STATEMENTS).fill(1);
     var encoded = encodeState({ screen: "results", currentStep: steps.length - 1, answers: fullAnswers });
 
@@ -132,6 +121,7 @@ test("loading a URL with a results hash restores the results screen with compute
     assert(restored, "restoreState should report success");
     assert(resultsScreen.classList.contains("active"), "results screen should be active");
     assertEqual(authenticityPercentEl.textContent, "100%", "ideal===actual everywhere should score 100%");
+    assert(location.hash === "" || location.hash === "#", "hash should be cleared after being loaded");
 
     goToStart();
 });
@@ -182,9 +172,84 @@ test("restoreState: rejects a wizard state whose currentStep is out of range ins
     goToStart();
 });
 
-// ===========================================================================
-// Smoke test
-// ===========================================================================
+test("consumeUrlHash applies and strips a hash appearing after boot, e.g. via hashchange on an already-open tab", function () {
+    var partialAnswers = new Array(TOTAL_STATEMENTS).fill(null);
+    partialAnswers[steps[2].statementIndex] = 1;
+    var encoded = encodeState({ screen: "wizard", currentStep: 4, answers: partialAnswers });
+
+    goToStart();
+    location.hash = "#" + encoded;
+    var consumed = consumeUrlHash();
+
+    assert(consumed, "consumeUrlHash should report success");
+    assert(wizardScreen.classList.contains("active"), "wizard screen should be active");
+    assertEqual(currentStep, 4, "currentStep restored from the hash");
+    assert(location.hash === "" || location.hash === "#", "hash should be cleared after being consumed");
+
+    goToStart();
+});
+
+test("consumeUrlHash reports failure and touches nothing when there is no hash present", function () {
+    goToStart();
+    location.hash = "";
+    var consumed = consumeUrlHash();
+    assertEqual(consumed, false, "no hash to consume");
+    assert(startScreen.classList.contains("active"), "should remain on the start screen");
+});
+
+test("buildShareUrl encodes the current results state into a URL usable to restore it later", function () {
+    goToStart();
+    setScores({ Experiences: { ideal: 3, actual: -1 } }, 1);
+    finishWizard();
+
+    var shareUrl = buildShareUrl();
+    assert(shareUrl.indexOf(location.pathname) !== -1, "share URL should be based on the current page URL");
+
+    var hashIndex = shareUrl.indexOf("#");
+    assert(hashIndex !== -1, "share URL should contain a hash");
+    var decoded = decodeState(shareUrl.slice(hashIndex + 1));
+    assertEqual(decoded.screen, "results", "decoded screen");
+    assertArrayEqual(decoded.answers, answers, "decoded answers match current answers");
+
+    goToStart();
+});
+
+test("loadStateFromPastedUrl loads state from a full pasted URL, the same as loading that URL directly", function () {
+    var fullAnswers = new Array(TOTAL_STATEMENTS).fill(2);
+    var encoded = encodeState({ screen: "results", currentStep: steps.length - 1, answers: fullAnswers });
+    var pastedUrl = "https://example.com/index.html#" + encoded;
+
+    goToStart();
+    var loaded = loadStateFromPastedUrl(pastedUrl);
+
+    assert(loaded, "loadStateFromPastedUrl should report success");
+    assert(resultsScreen.classList.contains("active"), "results screen should be active");
+    assertArrayEqual(answers, fullAnswers, "answers restored from the pasted URL");
+
+    goToStart();
+});
+
+test("loadStateFromPastedUrl also accepts a bare encoded hash, without a full URL around it", function () {
+    var partialAnswers = new Array(TOTAL_STATEMENTS).fill(null);
+    partialAnswers[steps[1].statementIndex] = -2;
+    var encoded = encodeState({ screen: "wizard", currentStep: 3, answers: partialAnswers });
+
+    goToStart();
+    var loaded = loadStateFromPastedUrl("  " + encoded + "  ");
+
+    assert(loaded, "loadStateFromPastedUrl should report success for a bare hash");
+    assert(wizardScreen.classList.contains("active"), "wizard screen should be active");
+    assertEqual(currentStep, 3, "currentStep restored");
+
+    goToStart();
+});
+
+test("loadStateFromPastedUrl rejects garbage input instead of throwing", function () {
+    goToStart();
+    var loaded = loadStateFromPastedUrl("https://example.com/index.html#not-a-valid-encoded-state!!!");
+    assertEqual(loaded, false, "should report failure for an undecodable hash");
+    assert(startScreen.classList.contains("active"), "should remain on the start screen");
+});
 
 test("smoke test: progressing through all 32 statements sequentially reaches the results screen", function () {
     goToStart();
@@ -207,10 +272,6 @@ test("smoke test: progressing through all 32 statements sequentially reaches the
 
     goToStart();
 });
-
-// ===========================================================================
-// Wizard navigation
-// ===========================================================================
 
 test("goBack: decrements currentStep and re-renders the previous step, but is a no-op at step 0", function () {
     goToStart();
@@ -275,15 +336,10 @@ test("\"Statement X of Y\" label matches presentation order (displayNumber), not
     goToStart();
 });
 
-// ===========================================================================
-// Start Over
-// ===========================================================================
-
-test("Start Over clears answers, persisted state, and the URL, and returns to the start screen", function () {
+test("Start Over clears answers and persisted state, and returns to the start screen", function () {
     setScores({ Experiences: { ideal: 3, actual: -3 } }, 1);
     finishWizard();
     assert(localStorage.getItem(STORAGE_KEY) !== null, "localStorage should hold state before Start Over");
-    assert(location.hash.length > 1, "URL hash should be set before Start Over");
 
     goToStart();
 
@@ -291,12 +347,7 @@ test("Start Over clears answers, persisted state, and the URL, and returns to th
     assertEqual(answers.every(function (a) { return a === null; }), true, "answers should all be reset to null");
     assertEqual(currentStep, 0, "currentStep should reset to 0");
     assertEqual(localStorage.getItem(STORAGE_KEY), null, "localStorage should be cleared");
-    assert(location.hash === "" || location.hash === "#", "URL hash should be cleared");
 });
-
-// ===========================================================================
-// Core Values section (selectTopIdealValues + rendering)
-// ===========================================================================
 
 test("Core Values: individual scores shown are scoreToPercent(ideal)", function () {
     setScores({ Experiences: { ideal: 3 }, Impact: { ideal: -3 }, Family: { ideal: 0 } }, -3);
@@ -347,12 +398,6 @@ test("Core Values: sorted by ideal score descending", function () {
     assert(core[2].ideal === 0 && core[3].ideal === 0, "ranks 3-4 are the tied values");
 });
 
-// Core Values is never hidden — the 3-step algorithm always returns at least 3 values.
-
-// ===========================================================================
-// Current Focus section (selectTopActualValues + rendering)
-// ===========================================================================
-
 test("Current Focus: individual scores shown are scoreToPercent(actual)", function () {
     setScores({ Wealth: { actual: 3 }, Home: { actual: -3 } }, -3);
     var results = computeResults();
@@ -380,12 +425,6 @@ test("Current Focus: sorted by actual score descending", function () {
     assert(focus[2].actual === 0 && focus[3].actual === 0, "ranks 3-4 are the tied values");
 });
 
-// Current Focus is never hidden, for the same reason as Core Values.
-
-// ===========================================================================
-// Authenticity Score section
-// ===========================================================================
-
 test("Authenticity Score: 100 when every value's ideal matches its actual", function () {
     setScores({}, 2);
     assertEqual(computeAuthenticityScore(computeResults()), 100, "score");
@@ -402,12 +441,6 @@ test("Authenticity Score: a single maximally-split value among matched ones pull
     setScores({ Experiences: { ideal: 3, actual: -3 } }, 3);
     assertEqual(computeAuthenticityScore(computeResults()), 94, "score");
 });
-
-// Authenticity Score is a single number, not a filtered/sorted list, and is always shown.
-
-// ===========================================================================
-// Ideal vs. Actual Comparison section (selectGreatestDisconnects)
-// ===========================================================================
 
 test("Comparison: individual disconnect percent is weight-scaled, not a plain |ideal - actual| gap", function () {
     setScores({ Experiences: { ideal: 3, actual: -3 }, Impact: { ideal: -1, actual: -3 } }, 0);
@@ -451,10 +484,6 @@ test("Comparison: section hides when there are no qualifying disconnects, shows 
 
     goToStart();
 });
-
-// ===========================================================================
-// Harmonies section (computeHarmonyPairs)
-// ===========================================================================
 
 test("Harmonies: individual percent shown for each side is always scoreToPercent(ideal), never actual", function () {
     setScores({ Experiences: { ideal: 3, actual: -3 }, Fame: { ideal: 3, actual: -3 } }, SCALE_MIN);
@@ -506,10 +535,6 @@ test("Harmonies: section hides when no eligible pairs exist, shows when at least
     goToStart();
 });
 
-// ===========================================================================
-// Dissonances section (computeDissonancePairs)
-// ===========================================================================
-
 test("Dissonances: filters to pairs where BOTH sides are Core Values, same rule as Harmonies", function () {
     setScores({
         Family: { ideal: 3 }, Service: { ideal: 3 }, Fame: { ideal: 3 },
@@ -542,10 +567,6 @@ test("Dissonances: section hides when no eligible pairs exist, shows when at lea
     goToStart();
 });
 
-// ===========================================================================
-// All Values section
-// ===========================================================================
-
 test("All Values: always includes all 16 values, unfiltered", function () {
     setScores({}, 0);
     var all = sortByNameAlphabetically(computeResults());
@@ -558,12 +579,6 @@ test("All Values: sorted alphabetically by name", function () {
     var expectedOrder = VALUES.map(function (v) { return v.name; }).slice().sort();
     assertNamesInOrder(all, expectedOrder, "alphabetical order");
 });
-
-// All Values is never hidden — it always has all 16 values regardless of answers.
-
-// ===========================================================================
-// Special algorithms & edge cases
-// ===========================================================================
 
 test("isValidAnswersArray: validates shape, length, and value range", function () {
     assertEqual(isValidAnswersArray(new Array(TOTAL_STATEMENTS).fill(null)), true, "all null is valid");
@@ -630,16 +645,6 @@ test("decodeState rejects garbage or truncated input instead of throwing", funct
     assertEqual(decodeState("AA"), null, "too short to hold 32 answers");
 });
 
-// ===========================================================================
-// Runner
-// ===========================================================================
-
-// The suite fires 100+ synchronous history.replaceState calls (persistState
-// runs on every rendered statement). No test depends on real History API
-// semantics — they only check the resulting location.hash — but that many
-// calls during the browser's initial page-load parse has occasionally
-// raced and left a stale hash behind. Writing to location.hash directly for
-// the run's duration avoids this; the real replaceState is restored after.
 function withStubbedHistory(fn) {
     var realReplaceState = history.replaceState.bind(history);
     history.replaceState = function (state, title, url) {

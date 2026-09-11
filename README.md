@@ -8,12 +8,12 @@ There is no framework, no bundler, no package manager. Plain `var`/`function`,
 ES5-style, no modules — just `<link>`/`<script>` tags loaded in order:
 
 - `index.html` — the three screens (start, wizard, results) and all their DOM structure.
-- `theme.css` — generic page theme (fonts, colors, buttons, screen chrome, floating widgets). Nothing values/statements/results-specific.
-- `wizard.css` — styling for the start screen and wizard (upload, progress bar, statement display, rating scale).
+- `theme.css` — reusable page theme (fonts, colors, buttons, screen chrome, floating widgets, modal dialogs). No app-specific content.
+- `wizard.css` — styling for the start screen and wizard (progress bar, statement display, rating scale).
 - `results.css` — styling for the results screen (floating nav, section dividers, authenticity bar, value-pair rows, result items).
 - `theme.js` — generic page behavior with no dependency on app state. Currently just the "back to top" button.
 - `values-data.js` — pure content: the 16 values, their harmony/dissonance pairs, and the rating-scale constants. No logic.
-- `wizard.js` — statement sequencing, state persistence (URL hash + localStorage), and wizard screen mechanics, plus download/upload.
+- `wizard.js` — statement sequencing, state persistence (URL hash on load + localStorage), wizard screen mechanics, and the load/share modals.
 - `results.js` — turning `answers` into the results screen: score computation, selection algorithms, and all rendering, plus the results-page scroll-spy nav.
 - `main.js` — boot sequence, event wiring, and the debug shortcut. Loads last, after the three files above.
 
@@ -179,11 +179,21 @@ history / prior design notes if this behavior is ever questioned.
 
 ## State persistence (why the URL looks like that)
 
-`persistState()` writes state to **two** places on every statement answered
-and on entering results:
+`persistState()` writes state to `localStorage`
+(`STORAGE_KEY = "myvalues-state-v1"`, plain JSON) on every statement answered
+and on entering results. It does **not** touch the URL — the hash is never
+kept in sync live.
 
-1. `localStorage` (`STORAGE_KEY = "myvalues-state-v1"`), as plain JSON.
-2. The URL hash, bit-packed and base64url-encoded (`encodeState`/`decodeState`), so a results/progress link is shareable and short.
+The hash is treated as one-shot, via `consumeUrlHash()`: whenever one is
+present, it's decoded (bit-packed, base64url — `encodeState`/`decodeState`)
+and then immediately stripped from the address bar via `history.replaceState`,
+regardless of whether it parsed successfully. `restoreState()` calls this
+once at boot, falling back to `localStorage` whenever the hash was absent or
+invalid (e.g. a bare URL after closing and reopening the tab). A `hashchange`
+listener in `main.js` calls the same `consumeUrlHash()` afterwards, since
+dropping a hash into an *already-open* tab's address bar is a same-document
+navigation (no reload) that `restoreState()`'s one-time boot call would
+otherwise never see.
 
 The bit layout is fixed: 1 bit for screen (wizard vs results) + 6 bits for
 `currentStep` + 3 bits per answer × 32 answers = 103 bits, padded to a byte
@@ -191,9 +201,11 @@ boundary before base64url encoding. **3 bits per answer is load-bearing**:
 it needs to represent 8 states (`null` + 7 possible scores from −3..3
 inclusive) — if the scale range ever changes, `ANSWER_BITS` must be revisited.
 
-On load, `restoreState()` prefers the URL hash over `localStorage` if both
-are present and the hash parses successfully; `localStorage` is the fallback
-for a bare URL with no hash (e.g. after closing and reopening the tab).
+A shareable link is instead generated **on-demand** by `buildShareUrl()`,
+called only when the user opens the "Save/share results" modal from the
+results screen. It encodes the current `answers` the same way and appends
+the hash to the page's current URL (origin + pathname + search, no
+pre-existing hash).
 
 ## The results-page nav box
 
@@ -206,6 +218,6 @@ section. Two things it does that aren't obvious from the markup:
 ## Other things worth knowing
 
 - **Debug shortcut**: `Ctrl+Alt+R` (or `Cmd+Option+R` on Mac) fills all 32 answers randomly and jumps straight to results, with a toast confirmation. It's a capture-phase `window` keydown listener checking both `e.code` and `e.key` for cross-layout robustness. Intended for local testing only — there's no way to disable it in a "production" sense, so don't be surprised if it fires during a demo.
-- **Upload/Download**: "Download results" exports `{ version: 1, exportedAt, answers, results }` as JSON. "Upload previous results" only reads back `answers` (via `isValidAnswersArray`) and recomputes everything else — the exported `results` blob is for the user's own reference, not re-imported.
+- **Load/Save-share modals**: there is no file-based export/import anymore. "Save/share results" opens a modal showing the on-demand `buildShareUrl()` link with a copy button. "Load previous results" opens a modal with a text box; pasting either a full URL or a bare encoded hash and submitting calls `loadStateFromPastedUrl()`, which extracts the hash and applies it exactly like loading that URL directly (shared `applyDecodedState()` logic with `restoreState()`).
 - **Fonts**: `Work Sans` and `Ubuntu Mono` are self-hosted (`fonts/`), both under licenses that permit redistribution (SIL OFL / Ubuntu Font Licence — see `fonts/UFL.txt`). Font Awesome (`fontawesome/`) is Free, CC BY 4.0 + SIL OFL. Don't add a font here without checking its license permits bundling the actual font file in the repo.
 - **No build step, no linter config** — but there is a small test suite: `tests.html` + `tests.js`. It's a dependency-free harness that loads the real app scripts (`values-data.js`, `wizard.js`, `results.js`, `main.js`) against a DOM that mirrors `index.html`, then drives the actual global functions (`computeResults`, `selectTopIdealValues`, `computeHarmonyPairs`, `encodeState`/`decodeState`, etc.) with hand-picked scenarios and asserts on the results — nothing is mocked. Run it via a local server (`python3 -m http.server 8934`, then open `http://localhost:8934/tests.html`); results render on the page and print to the console. If you change `index.html`'s structure (add/remove/rename an id the app scripts look up), mirror that change in `tests.html` too, or it'll throw on load instead of running anything.

@@ -71,12 +71,9 @@
     </style>
 </head>
 
-<!--
-    This page mirrors index.html's DOM structure exactly, because main.js looks
-    up a fixed set of element ids at load time. If you change index.html's
-    structure (add/remove/rename an id it relies on), mirror the change here too,
-    or this page will throw on load instead of running any tests.
--->
+<!-- This mirrors index.html's DOM structure: main.js looks up fixed element
+     ids at load time, and will throw here if index.html's ids change without
+     a matching change to this file. -->
 <body>
     <div class="app">
         <div class="app-header">
@@ -92,12 +89,8 @@
                 different values.
             </p>
             <div class="screen-actions">
-                <button id="upload-button" class="btn btn-secondary-pink">Upload previous results</button>
+                <button id="load-button" class="btn btn-secondary-pink">Load previous results</button>
                 <button id="start-button" class="btn btn-primary">Start</button>
-            </div>
-            <div class="upload-action">
-                <input type="file" id="upload-input" accept="application/json" hidden />
-                <p id="upload-error" class="upload-error"></p>
             </div>
         </div>
 
@@ -213,11 +206,35 @@
 
             <div class="screen-actions">
                 <button id="restart-button" class="btn btn-secondary-pink">Start Over</button>
-                <button id="download-button" class="btn btn-primary">Download results</button>
+                <button id="share-button" class="btn btn-primary">Save/share results</button>
             </div>
         </div>
     </div>
     <div id="to-top"><i class="fa-solid fa-angle-up"></i> Back to top</div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="load-modal" class="modal hidden">
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            <h2 class="modal-title">Load previous results</h2>
+            <p class="modal-description">Paste a results URL you saved earlier.</p>
+            <input type="text" id="load-url-input" class="modal-input" placeholder="Paste URL here" />
+            <p id="load-url-error" class="modal-error"></p>
+            <div class="modal-actions">
+                <button type="button" id="load-url-submit" class="btn btn-primary">Load</button>
+            </div>
+        </div>
+
+        <div id="share-modal" class="modal hidden">
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            <h2 class="modal-title">Save/share results</h2>
+            <p class="modal-description">Copy this URL to save your results or share them with someone else.</p>
+            <div class="modal-copy-row">
+                <input type="text" id="share-url-output" class="modal-input" readonly />
+                <button type="button" id="share-url-copy" class="btn btn-secondary">Copy</button>
+            </div>
+            <p id="share-url-copied" class="modal-copied"></p>
+        </div>
+    </div>
 
     <div id="test-report">
         <h1>myvalues — test suite</h1>

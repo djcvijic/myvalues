@@ -1,8 +1,5 @@
-// Statement sequencing, state persistence (URL hash + localStorage), and
-// wizard screen mechanics. Depends on values-data.js. Calls into results.js
-// (showResults, finishWizard, computeResults) only from inside function
-// bodies, so load order just needs results.js loaded before those functions
-// are actually invoked, not before this file parses.
+// Calls results.js functions only inside function bodies, so results.js
+// just needs to load before they run, not before this file parses.
 
 var IDEAL_CONTEXT = "In my ideal life...";
 var ACTUAL_CONTEXT = "In my life as it is now...";
@@ -23,8 +20,7 @@ statements.forEach(function () {
 var IDEAL_INTRO_TEXT = "Imagine your ideal life, the life you'd build for yourself if you could be however you wanted, with no constraints. Keep that ideal life in mind as you answer the next set of statements.";
 var ACTUAL_INTRO_TEXT = "Now come back to reality. Think about your life as it actually is today, how you spend your time and energy, and how you currently organize your life. Keep that in mind as you answer the next set of statements.";
 
-// Shuffled presentation orders (indices into VALUES). Hardcoded rather than
-// randomized so every visitor sees the same order within each half.
+// Fixed shuffles of VALUES indices, so every visitor sees the same order.
 var IDEAL_ORDER = [0, 15, 10, 14, 13, 7, 12, 6, 5, 1, 2, 9, 11, 4, 8, 3];
 var ACTUAL_ORDER = [15, 14, 7, 5, 13, 0, 10, 1, 3, 11, 9, 12, 6, 4, 2, 8];
 
@@ -56,12 +52,20 @@ var resultsScreen = document.getElementById("results-screen");
 
 var startButton = document.getElementById("start-button");
 var restartButton = document.getElementById("restart-button");
-var downloadButton = document.getElementById("download-button");
+var shareButton = document.getElementById("share-button");
 var backButton = document.getElementById("back-button");
 var continueButton = document.getElementById("continue-button");
-var uploadButton = document.getElementById("upload-button");
-var uploadInput = document.getElementById("upload-input");
-var uploadErrorEl = document.getElementById("upload-error");
+var loadButton = document.getElementById("load-button");
+
+var modalOverlay = document.getElementById("modal-overlay");
+var loadModal = document.getElementById("load-modal");
+var shareModal = document.getElementById("share-modal");
+var loadUrlInput = document.getElementById("load-url-input");
+var loadUrlError = document.getElementById("load-url-error");
+var loadUrlSubmit = document.getElementById("load-url-submit");
+var shareUrlOutput = document.getElementById("share-url-output");
+var shareUrlCopyButton = document.getElementById("share-url-copy");
+var shareUrlCopiedMsg = document.getElementById("share-url-copied");
 
 var progressFill = document.getElementById("progress-fill");
 var introBlock = document.getElementById("intro-block");
@@ -94,7 +98,7 @@ function isValidAnswersArray(candidate) {
 }
 
 // State is bit-packed (1 bit screen + 6 bits step + 3 bits per answer) and
-// base64url-encoded, to keep the URL hash as short as possible.
+// base64url-encoded, to keep the URL short.
 var STEP_BITS = 6;
 var ANSWER_BITS = 3;
 
@@ -193,32 +197,13 @@ function persistState(screenName) {
         answers: answers
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    history.replaceState(null, "", "#" + encodeState(state));
 }
 
 function clearPersistedState() {
     localStorage.removeItem(STORAGE_KEY);
-    history.replaceState(null, "", location.pathname + location.search);
 }
 
-function restoreState() {
-    var state = null;
-
-    if (location.hash && location.hash.length > 1) {
-        state = decodeState(location.hash.slice(1));
-    }
-
-    if (!state) {
-        var raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            try {
-                state = JSON.parse(raw);
-            } catch (e) {
-                state = null;
-            }
-        }
-    }
-
+function applyDecodedState(state) {
     if (!state || !isValidAnswersArray(state.answers)) {
         return false;
     }
@@ -227,6 +212,7 @@ function restoreState() {
 
     if (state.screen === "results") {
         showResults();
+        persistState("results");
         return true;
     }
 
@@ -239,6 +225,51 @@ function restoreState() {
     }
 
     return false;
+}
+
+// One-shot: decodes the hash, then strips it from the address bar either way.
+function consumeUrlHash() {
+    if (!location.hash || location.hash.length <= 1) {
+        return false;
+    }
+
+    var state = decodeState(location.hash.slice(1));
+    history.replaceState(null, "", location.pathname + location.search);
+    return applyDecodedState(state);
+}
+
+function restoreState() {
+    if (consumeUrlHash()) {
+        return true;
+    }
+
+    var state = null;
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+        try {
+            state = JSON.parse(raw);
+        } catch (e) {
+            state = null;
+        }
+    }
+
+    return applyDecodedState(state);
+}
+
+function buildShareUrl() {
+    var state = {
+        screen: "results",
+        currentStep: currentStep,
+        answers: answers
+    };
+    return location.origin + location.pathname + location.search + "#" + encodeState(state);
+}
+
+function loadStateFromPastedUrl(input) {
+    var trimmed = (input || "").trim();
+    var hashIndex = trimmed.indexOf("#");
+    var encoded = hashIndex === -1 ? trimmed : trimmed.slice(hashIndex + 1);
+    return applyDecodedState(decodeState(encoded));
 }
 
 function showScreen(screen) {
@@ -346,52 +377,60 @@ function goBack() {
     }
 }
 
-function downloadResults() {
-    var payload = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        answers: answers,
-        results: computeResults()
-    };
-    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement("a");
-    link.href = url;
-    link.download = "myvalues-results.json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+function openModal(modal) {
+    modalOverlay.classList.remove("hidden");
+    modal.classList.remove("hidden");
 }
 
-function showUploadError() {
-    uploadErrorEl.textContent = "Couldn't read that file. Please upload a results file exported from myvalues.";
+function closeModals() {
+    modalOverlay.classList.add("hidden");
+    loadModal.classList.add("hidden");
+    shareModal.classList.add("hidden");
+    loadUrlInput.value = "";
+    clearLoadUrlError();
 }
 
-function clearUploadError() {
-    uploadErrorEl.textContent = "";
+function showLoadUrlError() {
+    loadUrlError.textContent = "Couldn't read that URL. Please paste a results URL generated by myvalues.";
 }
 
-function handleUploadedFile(file) {
-    var reader = new FileReader();
-    reader.onload = function (e) {
-        var parsed;
-        try {
-            parsed = JSON.parse(e.target.result);
-        } catch (err) {
-            showUploadError();
-            return;
-        }
+function clearLoadUrlError() {
+    loadUrlError.textContent = "";
+}
 
-        if (!parsed || !isValidAnswersArray(parsed.answers)) {
-            showUploadError();
-            return;
-        }
+function openLoadModal() {
+    clearLoadUrlError();
+    openModal(loadModal);
+    loadUrlInput.focus();
+}
 
-        clearUploadError();
-        answers = parsed.answers;
-        finishWizard();
-    };
-    reader.onerror = showUploadError;
-    reader.readAsText(file);
+function submitLoadUrl() {
+    if (!loadStateFromPastedUrl(loadUrlInput.value)) {
+        showLoadUrlError();
+        return;
+    }
+    closeModals();
+}
+
+function openShareModal() {
+    shareUrlCopiedMsg.textContent = "";
+    shareUrlOutput.value = buildShareUrl();
+    openModal(shareModal);
+    shareUrlOutput.focus();
+    shareUrlOutput.select();
+}
+
+function copyShareUrl() {
+    shareUrlOutput.focus();
+    shareUrlOutput.select();
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrlOutput.value).then(function () {
+            shareUrlCopiedMsg.textContent = "Copied!";
+        });
+        return;
+    }
+
+    document.execCommand("copy");
+    shareUrlCopiedMsg.textContent = "Copied!";
 }
