@@ -56,11 +56,17 @@ function setScores(scoresByName, defaultScore) {
     Object.keys(scoresByName).forEach(function (name) {
         var idx = VALUE_INDEX_BY_NAME[name];
         var scores = scoresByName[name];
+        var idealBase = idx * STATEMENT_KEYS.length;
+        var actualBase = STATEMENTS_PER_PHASE + idealBase;
         if (scores.ideal !== undefined) {
-            answers[idx] = scores.ideal;
+            for (var k = 0; k < STATEMENT_KEYS.length; k++) {
+                answers[idealBase + k] = scores.ideal;
+            }
         }
         if (scores.actual !== undefined) {
-            answers[idx + VALUES.length] = scores.actual;
+            for (var k2 = 0; k2 < STATEMENT_KEYS.length; k2++) {
+                answers[actualBase + k2] = scores.actual;
+            }
         }
     });
 }
@@ -251,7 +257,7 @@ test("loadStateFromPastedUrl rejects garbage input instead of throwing", functio
     assert(startScreen.classList.contains("active"), "should remain on the start screen");
 });
 
-test("smoke test: progressing through all 32 statements sequentially reaches the results screen", function () {
+test("smoke test: progressing through all " + TOTAL_STATEMENTS + " statements sequentially reaches the results screen", function () {
     goToStart();
     startWizard();
     assertEqual(steps[currentStep].type, "intro", "wizard should start on the ideal intro");
@@ -268,7 +274,7 @@ test("smoke test: progressing through all 32 statements sequentially reaches the
     }
 
     assert(resultsScreen.classList.contains("active"), "results screen should be active after the last statement");
-    assertEqual(answers.indexOf(null), -1, "every one of the 32 answers should have been recorded");
+    assertEqual(answers.indexOf(null), -1, "every one of the " + TOTAL_STATEMENTS + " answers should have been recorded");
 
     goToStart();
 });
@@ -296,7 +302,7 @@ test("goBack: decrements currentStep and re-renders the previous step, but is a 
     goToStart();
 });
 
-test("wizard: shows the ideal framing for the first 16 statements and the actual framing for the last 16", function () {
+test("wizard: shows the ideal framing for the first " + STATEMENTS_PER_PHASE + " statements and the actual framing for the last " + STATEMENTS_PER_PHASE, function () {
     goToStart();
     startWizard();
     assertEqual(introTextEl.textContent, IDEAL_INTRO_TEXT, "first intro text");
@@ -305,19 +311,19 @@ test("wizard: shows the ideal framing for the first 16 statements and the actual
     renderStep();
     assertEqual(statementContextEl.textContent, IDEAL_CONTEXT, "context on the first ideal statement");
 
-    currentStep = 16;
+    currentStep = STATEMENTS_PER_PHASE;
     renderStep();
     assertEqual(statementContextEl.textContent, IDEAL_CONTEXT, "context on the last ideal statement");
 
-    currentStep = 17;
+    currentStep = STATEMENTS_PER_PHASE + 1;
     renderStep();
     assertEqual(introTextEl.textContent, ACTUAL_INTRO_TEXT, "second intro text");
 
-    currentStep = 18;
+    currentStep = STATEMENTS_PER_PHASE + 2;
     renderStep();
     assertEqual(statementContextEl.textContent, ACTUAL_CONTEXT, "context on the first actual statement");
 
-    currentStep = 33;
+    currentStep = steps.length - 1;
     renderStep();
     assertEqual(statementContextEl.textContent, ACTUAL_CONTEXT, "context on the last actual statement");
 
@@ -642,7 +648,7 @@ test("encodeState/decodeState round-trips a wizard-in-progress state through the
 
 test("decodeState rejects garbage or truncated input instead of throwing", function () {
     assertEqual(decodeState("not valid base64url!!"), null, "invalid characters");
-    assertEqual(decodeState("AA"), null, "too short to hold 32 answers");
+    assertEqual(decodeState("AA"), null, "too short to hold all answers");
 });
 
 function withStubbedHistory(fn) {

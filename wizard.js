@@ -4,39 +4,45 @@
 var IDEAL_CONTEXT = "In my ideal life...";
 var ACTUAL_CONTEXT = "In my life as it is now...";
 
-var statements = VALUES.map(function (v) {
-    return v.statement;
+// Each value contributes one entry per key in STATEMENT_KEYS (the main
+// statement plus its alt phrasings); all three count toward the value
+// identically, they're just different wordings of the same statement.
+var statementEntries = [];
+VALUES.forEach(function (v) {
+    STATEMENT_KEYS.forEach(function (key) {
+        statementEntries.push(v[key]);
+    });
 });
 
-var statementTexts = statements.concat(statements);
+var statementTexts = statementEntries.concat(statementEntries);
 var statementContexts = [];
-statements.forEach(function () {
+statementEntries.forEach(function () {
     statementContexts.push(IDEAL_CONTEXT);
 });
-statements.forEach(function () {
+statementEntries.forEach(function () {
     statementContexts.push(ACTUAL_CONTEXT);
 });
 
 var IDEAL_INTRO_TEXT = "Imagine your ideal life, the life you'd build for yourself if you could be however you wanted, with no constraints. Keep that ideal life in mind as you answer the next set of statements.";
 var ACTUAL_INTRO_TEXT = "Now come back to reality. Think about your life as it actually is today, how you spend your time and energy, and how you currently organize your life. Keep that in mind as you answer the next set of statements.";
 
-// Fixed shuffles of VALUES indices, so every visitor sees the same order.
-var IDEAL_ORDER = [0, 15, 10, 14, 13, 7, 12, 6, 5, 1, 2, 9, 11, 4, 8, 3];
-var ACTUAL_ORDER = [15, 14, 7, 5, 13, 0, 10, 1, 3, 11, 9, 12, 6, 4, 2, 8];
+// Fixed shuffles of statementEntries indices, so every visitor sees the same order.
+var IDEAL_ORDER = [9,10,47,6,35,3,1,23,22,18,32,27,14,21,17,7,20,40,13,41,15,39,0,16,12,8,36,46,43,19,4,5,29,45,33,37,11,26,30,28,2,25,31,24,34,44,38,42];
+var ACTUAL_ORDER = [5,27,20,14,47,45,16,9,29,1,39,40,34,46,26,12,23,13,33,38,43,35,41,0,22,3,25,19,37,4,32,2,8,44,6,30,11,17,18,36,21,31,28,42,10,7,15,24];
 
 var steps = [];
 (function buildSteps() {
     var statementNumber = 0;
 
     steps.push({ type: "intro", text: IDEAL_INTRO_TEXT });
-    IDEAL_ORDER.forEach(function (valueIndex) {
+    IDEAL_ORDER.forEach(function (entryIndex) {
         statementNumber++;
-        steps.push({ type: "statement", statementIndex: valueIndex, displayNumber: statementNumber });
+        steps.push({ type: "statement", statementIndex: entryIndex, displayNumber: statementNumber });
     });
     steps.push({ type: "intro", text: ACTUAL_INTRO_TEXT });
-    ACTUAL_ORDER.forEach(function (valueIndex) {
+    ACTUAL_ORDER.forEach(function (entryIndex) {
         statementNumber++;
-        steps.push({ type: "statement", statementIndex: valueIndex + VALUES.length, displayNumber: statementNumber });
+        steps.push({ type: "statement", statementIndex: entryIndex + STATEMENTS_PER_PHASE, displayNumber: statementNumber });
     });
 })();
 
@@ -97,9 +103,9 @@ function isValidAnswersArray(candidate) {
         });
 }
 
-// State is bit-packed (1 bit screen + 6 bits step + 3 bits per answer) and
+// State is bit-packed (1 bit screen + 7 bits step + 3 bits per answer) and
 // base64url-encoded, to keep the URL short.
-var STEP_BITS = 6;
+var STEP_BITS = 7;
 var ANSWER_BITS = 3;
 
 function bitsToBase64Url(bits) {

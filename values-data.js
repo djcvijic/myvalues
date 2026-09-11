@@ -1,6 +1,6 @@
 // Loads first — wizard.js and results.js depend on these globals.
 
-var TOTAL_STATEMENTS = 32;
+var STATEMENT_KEYS = ["statement", "statementAlt1", "statementAlt2"];
 var SCALE_MIN = -3;
 var SCALE_MAX = 3;
 
@@ -19,6 +19,8 @@ var VALUES = [
     {
         name: "Experiences",
         statement: "I live for adventure, to have a wide variety of experiences.",
+        statementAlt1: "Trying new things and keeping life varied is what drives me.",
+        statementAlt2: "Novelty and adventure are what make my life feel alive.",
         definition: "Living a full, varied life through new adventures and experiences, rather than routine or predictability. People high in this value are energized by change, novelty, and trying new things.",
         deficitExplanation: "When your life has less variety and adventure than you crave, days can start to feel monotonous and stagnant, leaving you restless, bored, or like you're just going through the motions instead of truly living.",
         excessExplanation: "When your life is more chaotic and unpredictable than feels comfortable to you, you may end up feeling scattered, depleted, or unable to build the stability and routine you need to feel grounded.",
@@ -26,6 +28,8 @@ var VALUES = [
     {
         name: "Impact",
         statement: "I live to build a legacy and to change the world.",
+        statementAlt1: "Making a real difference on a large scale is what drives everything I do.",
+        statementAlt2: "I'm driven to leave a legacy so significant that it reshapes the world.",
         definition: "Wanting to leave a lasting mark on the world, whether by solving big problems, building something meaningful, or driving change at a systemic level, not just in your own life but beyond it.",
         deficitExplanation: "If your life feels smaller in scope than the impact you want to have, you may feel restless or unfulfilled, wondering whether your work and choices really matter or add up to anything lasting.",
         excessExplanation: "Chasing a bigger impact than you actually need to feel fulfilled can lead to burnout, overextension, and neglecting the smaller, more personal parts of life in pursuit of a legacy that isn't really yours to chase.",
@@ -33,6 +37,8 @@ var VALUES = [
     {
         name: "Family",
         statement: "I spend every day around my family, keeping my loved ones close and happy.",
+        statementAlt1: "Nothing shapes my daily life more than staying close to my family and making sure they're happy.",
+        statementAlt2: "My days are built around being there for my family and nurturing those relationships.",
         definition: "Family sits at the center of how you organize your time, decisions, and priorities. This reflects how much closeness with, and responsibility toward, your family shapes your life.",
         deficitExplanation: "When family plays a smaller role in your daily life than you'd like, you may feel guilt, distance, or a nagging sense that you're missing out on the closeness and connection that matters most to you.",
         excessExplanation: "When your life revolves around family more than truly fits you, you may lose touch with your own individual identity, interests, or needs outside of that role.",
@@ -40,6 +46,8 @@ var VALUES = [
     {
         name: "Service",
         statement: "I spend every day helping those around me and having a positive impact on my circle or community.",
+        statementAlt1: "Contributing to the people and community around me is central to how I spend my time.",
+        statementAlt2: "Helping the people around me isn't optional for me — I dedicate real time and energy to it every day.",
         definition: "A pull toward helping others and contributing to something larger than yourself, whether through direct acts of kindness, community involvement, or dedicating your time to causes beyond your own interests.",
         deficitExplanation: "If you're not able to help others or contribute to your community as much as you'd like, you may feel a quiet sense of selfishness or disconnection from a larger purpose.",
         excessExplanation: "Giving more of your time and energy to others than truly matches your own capacity can lead to burnout, resentment, or losing sight of your own needs along the way.",
@@ -47,6 +55,8 @@ var VALUES = [
     {
         name: "Fame",
         statement: "I strive to become as famous as possible, beloved by many, and recognized wherever I go.",
+        statementAlt1: "Being widely known, admired, and recognized is something I actively pursue.",
+        statementAlt2: "I need the whole world to know my name, and to be adored by as many people as I possibly can.",
         definition: "The desire to be known, admired, and recognized by others, ideally on a wide scale. Public visibility and acclaim matter to your sense of a life well lived.",
         deficitExplanation: "If you crave recognition and visibility but aren't getting it, you may feel overlooked, undervalued, or like your efforts are going unnoticed by the people who matter to you.",
         excessExplanation: "More public attention and recognition than you actually want can bring unwanted pressure, a loss of privacy, and the exhausting sense of always being watched or judged.",
@@ -54,6 +64,8 @@ var VALUES = [
     {
         name: "Agency",
         statement: "It's very important to me to make my own path, and my own decisions, regardless of others' wishes.",
+        statementAlt1: "I need to steer my own life, even when that means going against what others expect of me.",
+        statementAlt2: "Nothing matters more to me than making my own path and my own decisions, no matter what anyone else wants.",
         definition: "Self-determination: making your own choices and controlling the direction of your life, even when that means going against expectations or pressure from others.",
         deficitExplanation: "When you have less control over your own decisions than you need, you may feel stifled, resentful, or like you're living someone else's life instead of your own.",
         excessExplanation: "Insisting on more control and independence than actually serves you can leave you isolated, overburdened, or unable to lean on others for support when you need it.",
@@ -61,6 +73,8 @@ var VALUES = [
     {
         name: "Work",
         statement: "I organize my life to serve my work, and I take pride in it. Working is a virtue in itself, regardless of the results.",
+        statementAlt1: "My career comes first, and I find real meaning in the act of working itself, not just what it produces.",
+        statementAlt2: "I structure everything around my job, believing that hard work has value on its own.",
         definition: "How central your career or professional pursuits are to your identity and daily life. For some, work is simply a means to an end; for others, it's a defining, organizing force in how they live.",
         deficitExplanation: "If work plays a smaller role in your life than you'd like it to, you may feel unmoored, underutilized, or like you haven't found the professional purpose you're searching for.",
         excessExplanation: "When work takes up more of your identity and time than truly fits you, other parts of your life, like relationships, health, and rest, can quietly erode without you noticing.",
@@ -68,6 +82,8 @@ var VALUES = [
     {
         name: "Self-Care",
         statement: "My top priority is taking care of my physical and emotional wellbeing, living a life of peace and happiness.",
+        statementAlt1: "Looking after my body and mind, and finding calm and contentment, comes before everything else.",
+        statementAlt2: "I put my own wellbeing first, because peace and happiness matter most to me.",
         definition: "Prioritizing your own physical and emotional wellbeing, rest, and peace of mind. It's about valuing time spent tending to yourself, not just achieving or producing.",
         deficitExplanation: "Neglecting your own physical and emotional wellbeing more than feels right to you can leave you running on empty, more prone to burnout, illness, or resentment toward the demands placed on you.",
         excessExplanation: "Focusing on self-care far beyond what you actually need can tip into self-absorption or avoidance, making it harder to show up fully for other people or responsibilities in your life.",
@@ -75,6 +91,8 @@ var VALUES = [
     {
         name: "Achievement",
         statement: "I live to achieve great things. I will strive for ever greater heights, and won't rest until I've reached my full potential.",
+        statementAlt1: "Striving toward my full potential energizes me, and I'm always excited to reach for the next great height.",
+        statementAlt2: "Success and constant growth are what I chase; standing still isn't an option for me.",
         definition: "The drive to accomplish things, set goals, and continually reach higher. Visible, tangible success and personal accomplishment matter to how you measure a good life.",
         deficitExplanation: "If you're accomplishing less than you feel capable of, you may feel stuck, restless, or plagued by a nagging sense of unfulfilled potential.",
         excessExplanation: "Chasing achievement far beyond what actually satisfies you can leave you on a treadmill of accomplishment, never feeling like enough no matter how much you've done.",
@@ -82,6 +100,8 @@ var VALUES = [
     {
         name: "Wealth",
         statement: "The whole point of my life is to amass extraordinary financial wealth.",
+        statementAlt1: "Building serious financial wealth is the central purpose behind everything I do.",
+        statementAlt2: "Becoming truly rich is, more than anything else, what my life is about.",
         definition: "Financial security and material prosperity. Money, and the freedom it provides, shape your sense of a successful life.",
         deficitExplanation: "Having less financial security than you need can create ongoing stress, anxiety, and a persistent feeling of instability that colors other parts of your life.",
         excessExplanation: "Prioritizing money and material success more than truly serves you can crowd out relationships, meaning, or rest, leaving you wealthier but less fulfilled.",
@@ -89,6 +109,8 @@ var VALUES = [
     {
         name: "Self-Expression",
         statement: "I live to express myself freely, creatively, to be heard and understood.",
+        statementAlt1: "Being able to voice who I really am, creatively and openly, matters more than almost anything.",
+        statementAlt2: "I need to put my true self out into the world and have people actually hear it.",
         definition: "The need to express your authentic thoughts, creativity, and identity openly, and to be heard and understood by others.",
         deficitExplanation: "If you're holding back your true voice or creativity more than feels right, you may feel unseen, unheard, or like you're constantly editing yourself to fit in.",
         excessExplanation: "Expressing yourself more freely or loudly than actually serves you can strain relationships or invite conflict, especially if it comes at the expense of listening to others.",
@@ -96,6 +118,8 @@ var VALUES = [
     {
         name: "Aesthetic",
         statement: "I spend every day curating my environment and surrounding myself with beauty.",
+        statementAlt1: "Making my surroundings beautiful and intentional is something I care about constantly.",
+        statementAlt2: "I shape my everyday environment carefully, because beauty matters deeply to me.",
         definition: "An appreciation for beauty, whether in your surroundings, your appearance, or how you present yourself and your life to the world.",
         deficitExplanation: "When your surroundings or appearance matter more to you than what you're currently able to maintain, you may feel a persistent low-grade dissatisfaction with how your life looks and feels.",
         excessExplanation: "Investing more time, money, or energy into appearances and beauty than actually fulfills you can become a distraction from deeper sources of meaning and connection.",
@@ -103,6 +127,8 @@ var VALUES = [
     {
         name: "Community",
         statement: "I spend every day surrounded by close friends or a strong community. It's important for me to be a dependable, trusted member of my circle.",
+        statementAlt1: "Staying closely connected to friends and community, and being someone people can count on, matters a great deal to me.",
+        statementAlt2: "My life revolves around close relationships, and being a truly dependable, trusted presence in my community means everything to me.",
         definition: "Closeness with friends and a sense of belonging to a broader group. This reflects how much you rely on, and invest in, the people around you.",
         deficitExplanation: "Having less community and close friendship in your life than you crave can leave you feeling isolated, lonely, or disconnected, even when you're surrounded by people.",
         excessExplanation: "Surrounding yourself with more community and social obligation than you actually need can leave little room for solitude, rest, or the deeper one-on-one connections you also value.",
@@ -110,6 +136,8 @@ var VALUES = [
     {
         name: "Home",
         statement: "The place I live is of great importance to me. Making it feel like a true home, cozy and safe, is a top priority for me.",
+        statementAlt1: "Where I live matters enormously — I put real effort into making it feel warm, safe, and truly mine.",
+        statementAlt2: "Creating a comfortable, secure home base is one of the things I care most about.",
         definition: "Having a physical place that feels like your own: a home base that provides comfort, stability, and a sense of belonging.",
         deficitExplanation: "If where you live doesn't feel like a true home the way you need it to, you may feel unsettled, rootless, or like you're just passing through your own life.",
         excessExplanation: "Over-investing in a specific place or attachment to home beyond what serves you can make change, travel, or new opportunities feel more threatening than they need to.",
@@ -117,6 +145,8 @@ var VALUES = [
     {
         name: "Faith",
         statement: "I shape every day around the teachings and practices of my faith or spirituality.",
+        statementAlt1: "My daily life is guided by the beliefs and practices of my faith or spirituality.",
+        statementAlt2: "Faith or spirituality is woven into how I structure and live each day.",
         definition: "Organizing your life around religious or spiritual beliefs and practices. Faith or spirituality shapes your daily choices and sense of meaning.",
         deficitExplanation: "When your life is organized around faith or spirituality less than you'd like, you may feel a quiet spiritual emptiness or a disconnection from a sense of meaning bigger than yourself.",
         excessExplanation: "Organizing your life around faith or spirituality more rigidly than actually serves you can narrow your perspective or create friction with other parts of your life and relationships.",
@@ -124,11 +154,16 @@ var VALUES = [
     {
         name: "Companionship",
         statement: "I shape my life around my connection with my romantic partner, or finding my soulmate — loving them well and being loved.",
+        statementAlt1: "Deep romantic connection, whether with my partner now or the soulmate I'm still looking for, is central to how I build my life.",
+        statementAlt2: "Loving and being loved by the right partner is something I organize my whole life around.",
         definition: "The importance of romantic love and deep partnership. Finding and nurturing a close romantic relationship matters to your sense of fulfillment.",
         deficitExplanation: "If romantic love and partnership matter more to you than what you currently have, you may feel a persistent loneliness or longing, even amid a full life otherwise.",
         excessExplanation: "Centering your life around a romantic relationship more than truly serves you can mean losing touch with your own identity, friendships, or interests outside the relationship.",
     }
 ];
+
+var STATEMENTS_PER_PHASE = VALUES.length * STATEMENT_KEYS.length;
+var TOTAL_STATEMENTS = STATEMENTS_PER_PHASE * 2;
 
 // Each pair is symmetric: if A harmonizes with B, B harmonizes with A. No
 // reverse entry is needed.

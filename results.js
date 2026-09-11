@@ -1,17 +1,30 @@
 // Depends on globals from values-data.js and wizard.js: answers, showScreen,
-// steps, persistState, resultsScreen, and the *ListEl/*SectionEl DOM refs.
+// steps, persistState, resultsScreen, STATEMENT_KEYS, STATEMENTS_PER_PHASE,
+// and the *ListEl/*SectionEl DOM refs.
+
+// Each value has one answer per STATEMENT_KEYS entry (main statement plus
+// alt phrasings); they count identically, so the value's score is their
+// average, with unanswered (null) statements treated as 0.
+function averagedScore(base) {
+    var sum = 0;
+    for (var k = 0; k < STATEMENT_KEYS.length; k++) {
+        var a = answers[base + k];
+        sum += (a === null ? 0 : a);
+    }
+    return sum / STATEMENT_KEYS.length;
+}
 
 function computeResults() {
     var results = VALUES.map(function (v, i) {
-        var ideal = answers[i];
-        var actual = answers[i + VALUES.length];
+        var idealBase = i * STATEMENT_KEYS.length;
+        var actualBase = STATEMENTS_PER_PHASE + idealBase;
         return {
             name: v.name,
             definition: v.definition,
             deficitExplanation: v.deficitExplanation,
             excessExplanation: v.excessExplanation,
-            ideal: ideal === null ? 0 : ideal,
-            actual: actual === null ? 0 : actual
+            ideal: averagedScore(idealBase),
+            actual: averagedScore(actualBase)
         };
     });
 
