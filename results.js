@@ -140,8 +140,10 @@ function renderResultsList(container, results, buildItem) {
 // Shared by "Core Values" (scoreField "ideal") and "Current Focus" (scoreField
 // "actual"):
 //   1. The #1 value, and anything tied with it.
-//   2. If that's fewer than 5, add every value at 80%+.
-//   3. If still fewer than 3, fall back to top 3 (with ties at #3 included).
+//   2. If that's fewer than 2, fall back to top 2 (with ties at #2 included).
+//   3. If still fewer than 3, fall back to top 3 (with ties at #3 included) —
+//      unless that would result in more than 5 total values, in which case
+//      keep the step 2 result instead.
 function selectTopValuesByScore(results, scoreField) {
     var sorted = results.slice().sort(function (a, b) {
         return b[scoreField] - a[scoreField];
@@ -164,9 +166,10 @@ function selectTopValuesByScore(results, scoreField) {
         }
     });
 
-    if (core.length < 5) {
+    if (core.length < 2) {
+        var secondPlaceScore = sorted[1][scoreField];
         sorted.forEach(function (r) {
-            if (scoreToPercent(r[scoreField]) >= 80) {
+            if (r[scoreField] >= secondPlaceScore) {
                 add(r);
             }
         });
@@ -174,11 +177,12 @@ function selectTopValuesByScore(results, scoreField) {
 
     if (core.length < 3) {
         var thirdPlaceScore = sorted[2][scoreField];
-        sorted.forEach(function (r) {
-            if (r[scoreField] >= thirdPlaceScore) {
-                add(r);
-            }
+        var topThreeCandidates = sorted.filter(function (r) {
+            return r[scoreField] >= thirdPlaceScore;
         });
+        if (topThreeCandidates.length <= 5) {
+            topThreeCandidates.forEach(add);
+        }
     }
 
     return core;

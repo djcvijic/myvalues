@@ -369,13 +369,14 @@ test("Core Values: filters via the 3-step algorithm — a large #1 tie group sho
     assertNamesEqual(core, ["Experiences", "Impact", "Family", "Service", "Fame", "Agency"], "core values");
 });
 
-test("Core Values: filters via the 3-step algorithm — step 2 pulls in every 80%+ value when the #1 tie group is small", function () {
+test("Core Values: filters via the 3-step algorithm — step 2 already reaching 3 short-circuits step 3", function () {
     setScores({
         Experiences: { ideal: 3 },
-        Impact: { ideal: 2 }, Family: { ideal: 2 }, Service: { ideal: 2 }
-    }, SCALE_MIN);
+        Impact: { ideal: 1 }, Family: { ideal: 1 },
+        Service: { ideal: 0 }, Fame: { ideal: 0 }
+    }, -2);
     var core = selectTopIdealValues(computeResults());
-    assertNamesEqual(core, ["Experiences", "Impact", "Family", "Service"], "core values");
+    assertNamesEqual(core, ["Experiences", "Impact", "Family"], "core values");
 });
 
 test("Core Values: filters via the 3-step algorithm — step 3 falls back to top 3 with ties at #3 when steps 1-2 leave fewer than 3", function () {
@@ -388,14 +389,25 @@ test("Core Values: filters via the 3-step algorithm — step 3 falls back to top
     assertNamesEqual(core, ["Experiences", "Impact", "Family", "Service", "Fame"], "core values");
 });
 
+test("Core Values: filters via the 3-step algorithm — step 3 is skipped, keeping the step 2 result, when a large tie at #3 would push the total past 5", function () {
+    setScores({
+        Experiences: { ideal: 3 },
+        Impact: { ideal: 1 },
+        Family: { ideal: 0 }, Service: { ideal: 0 }, Fame: { ideal: 0 },
+        Agency: { ideal: 0 }, Work: { ideal: 0 }, Achievement: { ideal: 0 }
+    }, -2);
+    var core = selectTopIdealValues(computeResults());
+    assertNamesEqual(core, ["Experiences", "Impact"], "core values");
+});
+
 test("Core Values: sorted by ideal score descending", function () {
     setScores({
-        Experiences: { ideal: 3 }, Impact: { ideal: 1 }, Family: { ideal: 0 }, Service: { ideal: 0 }
+        Experiences: { ideal: 3 }, Impact: { ideal: 1 }, Family: { ideal: 1 }, Service: { ideal: 1 }
     }, -3);
     var core = selectTopIdealValues(computeResults());
     assertEqual(core[0].name, "Experiences", "rank 1");
     assertEqual(core[1].name, "Impact", "rank 2");
-    assert(core[2].ideal === 0 && core[3].ideal === 0, "ranks 3-4 are the tied values");
+    assert(core[2].ideal === 1 && core[3].ideal === 1, "ranks 3-4, tied with #2, are included via the top-2 fallback");
 });
 
 test("Current Focus: individual scores shown are scoreToPercent(actual)", function () {
@@ -418,11 +430,11 @@ test("Current Focus: mirrors the Core Values 3-step algorithm, keyed on actual s
 });
 
 test("Current Focus: sorted by actual score descending", function () {
-    setScores({ Wealth: { actual: 3 }, Home: { actual: 1 }, Faith: { actual: 0 }, Community: { actual: 0 } }, -3);
+    setScores({ Wealth: { actual: 3 }, Home: { actual: 1 }, Faith: { actual: 1 }, Companionship: { actual: 1 } }, -3);
     var focus = selectTopActualValues(computeResults());
     assertEqual(focus[0].name, "Wealth", "rank 1");
     assertEqual(focus[1].name, "Home", "rank 2");
-    assert(focus[2].actual === 0 && focus[3].actual === 0, "ranks 3-4 are the tied values");
+    assert(focus[2].actual === 1 && focus[3].actual === 1, "ranks 3-4, tied with #2, are included via the top-2 fallback");
 });
 
 test("Authenticity Score: 100 when every value's ideal matches its actual", function () {
