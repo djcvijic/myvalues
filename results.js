@@ -285,15 +285,15 @@ function computeDissonancePairs(results) {
 var AUTHENTICITY_TIERS = [
     {
         min: 80,
-        definition: "You're living authentically. Your daily life is genuinely organized around the values that matter most to you, and that kind of alignment tends to bring a lasting sense of peace, clarity, and harmony. It's worth protecting as your life continues to change."
+        definition: "You're living authentically. Your daily life is genuinely organized around the values that matter most to you, and that kind of alignment tends to bring a lasting sense of peace, clarity, and harmony. It's worth protecting as your life continues to change. You'll see what's driving any remaining gaps later, in the Comparison section."
     },
     {
         min: 50,
-        definition: "You're living with a mix of alignment and disconnects. A good amount of what matters most to you is already showing up in your daily life, which is real progress. With a few intentional changes, you can close the remaining gap and feel even more in sync."
+        definition: "You're living with a mix of alignment and disconnects. A good amount of what matters most to you is already showing up in your daily life, which is real progress. With a few intentional changes, you can close the remaining gap and feel even more in sync. You'll see what's driving these gaps later, in the Comparison section."
     },
     {
         min: -Infinity,
-        definition: "Right now, there's a significant gap between what matters most to you and how you're actually spending your life. That happens to almost everyone at some point, often without noticing it creeping up. The good news is that it's never too late to course-correct and start living your truth."
+        definition: "Right now, there's a significant gap between what matters most to you and how you're actually spending your life. That happens to almost everyone at some point, often without noticing it creeping up. The good news is that it's never too late to course-correct and start living your truth. You'll see what's driving this gap later, in the Comparison section."
     }
 ];
 

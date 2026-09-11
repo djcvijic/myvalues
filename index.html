@@ -62,9 +62,9 @@
 
         <div id="results-screen" class="screen">
             <nav class="results-nav">
+                <a href="#authenticity-section" class="results-nav-link" data-section="authenticity-section">Authenticity Score</a>
                 <a href="#core-values-section" class="results-nav-link" data-section="core-values-section">Core Values</a>
                 <a href="#current-focus-section" class="results-nav-link" data-section="current-focus-section">Current Focus</a>
-                <a href="#authenticity-section" class="results-nav-link" data-section="authenticity-section">Authenticity Score</a>
                 <a href="#comparison-section" class="results-nav-link" data-section="comparison-section">Comparison</a>
                 <a href="#harmonies-section" class="results-nav-link" data-section="harmonies-section">Harmonies</a>
                 <a href="#dissonances-section" class="results-nav-link" data-section="dissonances-section">Dissonances</a>
@@ -72,6 +72,20 @@
             </nav>
 
             <h1 class="results-title">Your Results</h1>
+
+            <section id="authenticity-section" class="results-section">
+                <h2 class="results-section-title">Authenticity Score</h2>
+                <p class="screen-description">
+                    This shows how closely you're currently living in line with your true values.
+                </p>
+                <div class="authenticity-track">
+                    <div id="authenticity-fill" class="authenticity-fill"></div>
+                    <div id="authenticity-marker" class="authenticity-marker">
+                        <span id="authenticity-percent" class="authenticity-percent"></span>
+                    </div>
+                </div>
+                <p id="authenticity-definition" class="authenticity-definition"></p>
+            </section>
 
             <section id="core-values-section" class="results-section">
                 <h2 class="results-section-title">Core Values</h2>
@@ -87,20 +101,6 @@
                     These are what you currently organize your life around.
                 </p>
                 <div id="top-actual-values-list" class="results-list"></div>
-            </section>
-
-            <section id="authenticity-section" class="results-section">
-                <h2 class="results-section-title">Authenticity Score</h2>
-                <p class="screen-description">
-                    This shows how closely you're currently living in line with your true values.
-                </p>
-                <div class="authenticity-track">
-                    <div id="authenticity-fill" class="authenticity-fill"></div>
-                    <div id="authenticity-marker" class="authenticity-marker">
-                        <span id="authenticity-percent" class="authenticity-percent"></span>
-                    </div>
-                </div>
-                <p id="authenticity-definition" class="authenticity-definition"></p>
             </section>
 
             <section id="comparison-section" class="results-section">
