@@ -305,4 +305,8 @@
     .results-nav {
         display: none;
     }
+
+    #results-screen .screen-actions {
+        margin-bottom: 96px;
+    }
 }

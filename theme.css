@@ -343,8 +343,4 @@ button {
         right: auto;
         transform: translateX(-50%);
     }
-
-    #results-screen .screen-actions {
-        margin-bottom: 96px;
-    }
 }
